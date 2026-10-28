@@ -19,6 +19,8 @@ build/
 dist/
 build-assets/
 installer/output/
+build-installer/
+dist-installer/
 *.spec.tmp
 
 # Local service and desktop data

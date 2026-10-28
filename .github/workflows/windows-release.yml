@@ -53,22 +53,22 @@ jobs:
             --add-data "build-assets\whisper-small;models\whisper-small" `
             bou_studio.py
 
-      - name: Install Inno Setup
-        run: choco install innosetup --yes --no-progress
-
-      - name: Build single-file installer
+      - name: Build self-extracting setup executable
         shell: pwsh
         run: |
-          $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
-          if (-not (Test-Path $iscc)) { throw "Inno Setup compiler was not installed." }
-          & $iscc "installer\BouAssistant.iss"
-          if ($LASTEXITCODE -ne 0) { throw "Inno Setup failed with exit code $LASTEXITCODE." }
+          $payload = (Resolve-Path "dist\BouAssistant").Path
+          python -m PyInstaller --noconfirm --clean --windowed --onefile --name Bou-AI-Assistant-Setup `
+            --collect-all comtypes --hidden-import comtypes.client `
+            --add-data "$payload;payload" `
+            --distpath dist-installer --workpath build-installer --specpath build-installer `
+            installer\installer.py
+          if ($LASTEXITCODE -ne 0) { throw "Setup packaging failed with exit code $LASTEXITCODE." }
 
       - name: Upload installer artifact
         uses: actions/upload-artifact@v4
         with:
           name: Bou-AI-Assistant-Windows-x64
-          path: installer/output/Bou-AI-Assistant-Setup-x64-*.exe
+          path: dist-installer/Bou-AI-Assistant-Setup.exe
           if-no-files-found: error
           retention-days: 14
 
@@ -78,6 +78,6 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         shell: pwsh
         run: |
-          $installer = Get-ChildItem -Path "installer\output\Bou-AI-Assistant-Setup-x64-*.exe" | Select-Object -First 1
+          $installer = Get-Item -LiteralPath "dist-installer\Bou-AI-Assistant-Setup.exe" -ErrorAction SilentlyContinue
           if (-not $installer) { throw "Installer asset was not created." }
           gh release create "$env:GITHUB_REF_NAME" $installer.FullName --title "Bou AI Assistant $env:GITHUB_REF_NAME" --notes-file README-BN.md

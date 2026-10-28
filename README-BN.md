@@ -1,4 +1,4 @@
-# Bou AI Assistant 1.9.0
+# Bou AI Assistant 1.9.1
 
 Bou হলো Windows desktop AI assistant, সঙ্গে conversation memory, Manager ও Worker দল, এবং বিক্রির জন্য ব্যবহারকারীভিত্তিক hosted service। Assistant-এর source, service, admin panel ও changelog এই repository-তে রাখা হয়।
 
@@ -69,6 +69,12 @@ Bou 1.6.0-তে একবারের camera description এবং অনুম
 মূল desktop assistant এবং নতুন Bou interface-এর source, service code, Docker configuration, admin UI ও প্রয়োজনীয় image এই repository-তে রাখা হয়। Secret key, `.env`, Python virtual environment, local database ও generated install flags `.gitignore` দিয়ে বাদ দেওয়া হয়। প্রতিটি release-এ সংস্করণ বাড়িয়ে এই README-এর Changelog-এ কী বদলেছে তা লিখুন।
 
 ## Changelog
+
+### 1.9.1 — self-contained Windows setup
+
+- আলাদা installer compiler ছাড়াই PyInstaller দিয়ে এক ফাইলের self-extracting Windows setup তৈরি করা যায়।
+- User-level install, Start Menu ও desktop shortcut, install-এর পরে চালু করা এবং Windows uninstall entry যোগ হয়েছে।
+- Setup `.exe`-র ভেতরে desktop runtime ও offline Whisper model থাকে।
 
 ### 1.9.0 — Windows installer, key pool ও assistant preferences
 
