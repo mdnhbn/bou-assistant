@@ -1,4 +1,4 @@
-# Bou AI Assistant 1.8.1
+# Bou AI Assistant 1.9.0
 
 Bou হলো Windows desktop AI assistant, সঙ্গে conversation memory, Manager ও Worker দল, এবং বিক্রির জন্য ব্যবহারকারীভিত্তিক hosted service। Assistant-এর source, service, admin panel ও changelog এই repository-তে রাখা হয়।
 
@@ -21,10 +21,10 @@ Hosted mode-এ Provider API key ব্যবহারকারীর PC-তে 
 
 3. `.env` ও master key নিরাপদে ব্যাকআপ করে রাখুন। Master key হারালে সংরক্ষিত Provider key decrypt করা যাবে না।
 4. চালান `docker compose up --build`। Compose service-কে localhost-এর `8000` port-এ bind করে। Internet থেকে ব্যবহার করাতে HTTPS reverse proxy ও domain configure করুন।
-5. `https://আপনার-ডোমেইন/admin` খুলে admin token দিন। Manager এবং প্রত্যেক Worker-এর জন্য আলাদা করে দুইটি OpenRouter key slot, model ও নির্দেশনা সেট করুন।
+5. `https://আপনার-ডোমেইন/admin` খুলে admin token দিন। Manager এবং প্রত্যেক Worker-এর জন্য সর্বোচ্চ দশটি OpenRouter key slot, model ও নির্দেশনা সেট করুন।
 6. Admin panel থেকে customer তৈরি করে একবার দেখানো access token-টি তাকে দিন। তার Bou app-এ Settings খুলে `service` mode, HTTPS URL ও token বসান।
 
-Key slot 1 limit বা rejection পেলে সংশ্লিষ্ট agent slot 2 চেষ্টা করে; পরের সফল request-এর জন্য সক্রিয় slot মনে রাখে। এটি Manager ও প্রতিটি Worker-এর জন্য আলাদা। দুটো key-ই unavailable হলে admin panel-এ key বা provider limit দেখুন। Admin panel কোনো key আবার দেখায় না; বদলাতে নতুন key লিখুন। Customer token revoke/disable করা যায় এবং token database-এ hash হিসেবে থাকে।
+কোনো key limit-এ পড়লে বা reject হলে Bou ওই agent-এর পরের configured key চেষ্টা করে এবং সফল key-টি মনে রাখে। Manager ও প্রতিটি Worker-এর জন্য আলাদা pool-এ সর্বোচ্চ দশটি key রাখা যায়। সব key unavailable হলে admin panel-এ provider limit বা key status দেখুন। Admin panel কোনো key আবার দেখায় না; বদলাতে নতুন key লিখুন। Key server-এ encrypted থাকে। Customer token revoke/disable করা যায় এবং token database-এ hash হিসেবে থাকে।
 
 `service/data`-কে স্থায়ী server storage-এ রাখতে হবে। বর্তমান package domain/TLS, billing, subscription plans বা production database সেটআপ করে না। এটি service code ও local deployment configuration দেয়; public hosting চালু করতে আপনার server ও domain লাগবে।
 
@@ -52,7 +52,7 @@ Voice, image analysis, activity log এবং Settings-এর আরও বি�
 
 `Camera & PC` পেজে **Capture one frame** চাপার পর নিশ্চিত করলেই ক্যামেরা একবার চালু হয়। Bou একটি still frame নিয়ে সঙ্গে সঙ্গে ক্যামেরা বন্ধ করে, ছবিটি local preview-তে দেখায় এবং AI provider-এ পাঠানোর আগে আবার অনুমতি চায়। উত্তরটি দৃশ্যমান, সংবেদনশীল নয় এমন বৈশিষ্ট্য—যেমন পোশাক, চুল, accessories ও ভঙ্গি—নিয়ে হয়; Bou ব্যক্তিকে শনাক্ত করে না। ছবিটি disk-এ লেখা হয় না।
 
-Bou চালু হলে স্বাগত জানায়, তারপর Settings-এ চালু থাকলে live microphone session শুরু করে। Default Local Whisper প্রথমবার চালু হলে multilingual `small` model (প্রায় 500 MB) `%LOCALAPPDATA%\BouStudio\models\whisper`-এ download করে; এরপর transcription PC-তেই চলে এবং microphone audio কোনো speech service-এ পাঠায় না। Bou transcript text configured AI provider-এ পাঠিয়ে উত্তর আনে। Settings থেকে Wispr Flow বা Google বেছে নিলে microphone audio ওই service-এ যায়। Header-এর `Mic` বোতামে শোনা থামানো যায়; Bou raw microphone audio save করে না।
+Bou চালু হলে স্বাগত জানায়, তারপর Settings-এ চালু থাকলে live microphone session শুরু করে। GitHub-এর Windows installer-এ multilingual `small` Whisper model আগে থেকেই থাকে; source launcher প্রথমবার model-টি `%LOCALAPPDATA%\BouStudio\models\whisper`-এ download করে। এরপর transcription PC-তেই চলে এবং microphone audio কোনো speech service-এ পাঠায় না। Bou transcript text configured AI provider-এ পাঠিয়ে উত্তর আনে। Settings থেকে Wispr Flow বা Google বেছে নিলে microphone audio ওই service-এ যায়। Header-এর `Mic` বোতামে শোনা থামানো যায়; Bou raw microphone audio save করে না।
 
 Default transcription provider হলো Local Whisper; এর model একবার ডাউনলোডের পর speech recognition offline-এ চলে। Wispr Flow বা Google বেছে নিলে microphone audio সেই cloud service-এ পাঠানো হবে; Wispr-এর জন্য approved API key লাগে। Bou নিজে থেকে cloud transcription-এ fallback করে না।
 
@@ -69,6 +69,17 @@ Bou 1.6.0-তে একবারের camera description এবং অনুম
 মূল desktop assistant এবং নতুন Bou interface-এর source, service code, Docker configuration, admin UI ও প্রয়োজনীয় image এই repository-তে রাখা হয়। Secret key, `.env`, Python virtual environment, local database ও generated install flags `.gitignore` দিয়ে বাদ দেওয়া হয়। প্রতিটি release-এ সংস্করণ বাড়িয়ে এই README-এর Changelog-এ কী বদলেছে তা লিখুন।
 
 ## Changelog
+
+### 1.9.0 — Windows installer, key pool ও assistant preferences
+
+- GitHub Actions দিয়ে Windows x64 setup `.exe` তৈরি ও tagged GitHub Release-এ যুক্ত করার workflow যোগ হয়েছে; Python dependency, OpenCV এবং offline Whisper model installer-এ থাকে।
+- Hosted Manager ও প্রত্যেক Worker-এর জন্য encrypted দশটি পর্যন্ত key slot এবং configured key-গুলোর automatic fallback যোগ হয়েছে।
+- স্বাভাবিক Bengali-first কথা বলা, এবং Bou-র বাস্তব tool/approval সীমা ঠিকভাবে বোঝানোর persistent assistant instructions যোগ হয়েছে।
+- Camera feature-এর dependency OpenCV desktop dependency bundle-এ যোগ হয়েছে।
+
+Windows installer-এর সর্বশেষ `.exe` [GitHub Releases](https://github.com/mdnhbn/bou-assistant/releases/latest) থেকে নামানো যাবে। Installer-এ কোনো OpenRouter key, chat archive বা user database থাকে না। Install-এর পর Settings-এ নিজের key দিন; Bou Windows Credential Manager-এ key সংরক্ষণ করে। Installer code-signed নয়।
+
+ChatGPT-এর private model, skills, browser session বা account permission সরাসরি Bou-র memory-তে কপি করা যায় না। Bou-র নিজস্ব live voice, অনুমতি-নেওয়া একবারের camera description এবং এক ধাপ করে PC control আছে; unrestricted browser বা PC access নেই।
 
 ### 1.8.1 — Live voice setup ও local transcription
 

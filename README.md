@@ -1,4 +1,4 @@
-# Bou AI Assistant · 1.8.1
+# Bou AI Assistant · 1.9.0
 
 Bou is a Windows desktop assistant with local conversation memory and an optional hosted service. Provider API keys stay on the service server; customers connect with individual access tokens.
 
@@ -10,7 +10,7 @@ Bou is a Windows desktop assistant with local conversation memory and an optiona
 - `bou_core.py` and `bou_gui.py`: Bou voice engine and the simpler standalone interface.
 - `studio_engine.py` and `studio_store.py`: local assistant, worker manager, memory, and hosted-service client.
 - `service/`: FastAPI service and owner admin panel.
-- `service/static/admin.html`: configure agent roles and key pairs, create or revoke customer accounts.
+- `service/static/admin.html`: configure agent roles and up to ten encrypted key slots per agent, create or revoke customer accounts.
 
 ## Desktop dashboard
 
@@ -28,10 +28,10 @@ The layout and original Bou artwork are implemented in this project. Bou 1.6.0 a
 
 2. Keep `.env` and a backup of `BOU_MASTER_KEY` private. Losing the master key makes stored provider keys unreadable.
 3. Start the service with `docker compose up --build`.
-4. Open `/admin`, enter the admin token, configure two OpenRouter key slots for the Manager and each worker, then create a customer account.
+4. Open `/admin`, enter the admin token, configure up to ten OpenRouter key slots for the Manager and each worker, then create a customer account.
 5. In the customer's Bou app, choose **service** mode and enter the HTTPS service URL and customer access token.
 
-Each agent tries its second key when the first is rejected or reaches an OpenRouter limit (HTTP 401, 402, 403, or 429). Keys are encrypted at rest and never returned by the admin API. Customer tokens are stored as hashes and can be disabled or revoked. The hosted service does not save chat transcripts; the desktop app keeps its archive locally and sends only context enabled by the user.
+Each agent rotates through its configured keys when a key is rejected or reaches an OpenRouter limit (HTTP 401, 402, 403, or 429). Keys are encrypted at rest and never returned by the admin API. Customer tokens are stored as hashes and can be disabled or revoked. The hosted service does not save chat transcripts; the desktop app keeps its archive locally and sends only context enabled by the user.
 
 For internet-facing use, place the service behind HTTPS and use persistent server storage for `service/data`. The included Compose file binds to localhost for a reverse proxy; it does not configure a public domain, TLS, billing, or a production database.
 
@@ -40,6 +40,12 @@ For internet-facing use, place the service behind HTTPS and use persistent serve
 Run `Start-Bou.bat` on Windows. Local mode uses the existing OpenRouter key from the local installation. The launcher installs the optional OpenCV camera package if it is missing. Worker roles and manager instructions can be edited in Bou. The hosted admin key pool is used only when the app is set to service mode.
 
 On first run, `Start-Bou.bat` creates `.venv` when needed and installs the assistant's voice and desktop dependencies from `requirements.txt`.
+
+## Windows installer
+
+The GitHub Actions Windows workflow builds a single x64 setup `.exe` for tagged releases. It bundles Python and application dependencies, OpenCV, and the offline Whisper small model, then installs Bou and creates Start Menu shortcuts. Download the latest installer from [GitHub Releases](https://github.com/mdnhbn/bou-assistant/releases/latest). The installer does not contain an OpenRouter key, user data, or chat database. Enter your own API key in Settings after installation; Bou stores it in Windows Credential Manager. The source launcher downloads the Whisper model on first use, while the installer includes it for offline speech recognition. The installer is not code-signed.
+
+Bou's memory includes conversational preferences and user-approved local notes. ChatGPT's private model, skills, browser session, and account permissions cannot be copied into Bou. Bou only uses its own connected features: live voice, one-shot approved camera descriptions, and one-step-at-a-time PC control. It does not have unrestricted browser or PC access.
 
 ## Camera, microphone, and PC control
 
@@ -52,6 +58,13 @@ Local Whisper is the default transcription provider. The first live-listening st
 PC control is off by default and enabled only for the current session. Before every AI planning call, Bou shows the screenshot and asks before sharing it with the configured provider. It then displays one proposed click, key, scroll, or text entry and waits for approval. After executing at most that one action, it stops until the user requests another screenshot. Screenshots and PC-task details are not added to the conversation archive. Passwords, one-time codes, payments, purchases, sending/publishing, deletions, installs, agreements, and security-setting changes are blocked for the user to handle directly.
 
 ## Changelog
+
+### 1.9.0 — Windows installer, key pool, and assistant preferences
+
+- Added a GitHub Actions workflow that packages a Windows x64 setup executable with application dependencies and the offline Whisper model, then attaches it to tagged GitHub releases.
+- Expanded each hosted Manager/worker key pool to ten encrypted slots with automatic rotation across configured keys.
+- Added persistent assistant instructions for conversational Bengali-first replies and accurate descriptions of Bou's available tools and approval limits.
+- Added OpenCV to the desktop dependency bundle for the optional camera feature.
 
 ### 1.8.1 — Live voice setup and local transcription
 

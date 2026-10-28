@@ -1,0 +1,83 @@
+name: Windows installer
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: requirements.txt
+
+      - name: Install application and packaging dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt pyinstaller huggingface-hub
+
+      - name: Download the offline Whisper model
+        shell: pwsh
+        run: |
+          $download = Join-Path $env:RUNNER_TEMP "whisper-small-download"
+          $bundle = Join-Path $env:GITHUB_WORKSPACE "build-assets\whisper-small"
+          python -c "from huggingface_hub import snapshot_download; snapshot_download(repo_id='Systran/faster-whisper-small', local_dir=r'$download', allow_patterns=['config.json','preprocessor_config.json','model.bin','tokenizer.json','vocabulary.json','vocabulary.*'])"
+          New-Item -ItemType Directory -Path $bundle -Force | Out-Null
+          Get-ChildItem -LiteralPath $download -File | Copy-Item -Destination $bundle
+          if (-not (Test-Path (Join-Path $bundle "model.bin"))) { throw "Whisper model payload is missing." }
+
+      - name: Package desktop app
+        shell: pwsh
+        run: |
+          python -m PyInstaller --noconfirm --clean --windowed --onedir --name BouAssistant `
+            --collect-all faster_whisper --collect-all ctranslate2 --collect-all huggingface_hub `
+            --collect-all tokenizers --collect-all sounddevice --collect-all cv2 `
+            --collect-all pyttsx3 --collect-all comtypes --collect-all keyring `
+            --collect-all PIL --collect-all pyautogui --collect-all numpy `
+            --hidden-import pyttsx3.drivers.sapi5 --hidden-import comtypes.client `
+            --hidden-import tkinter --hidden-import tkinter.ttk `
+            --add-data "skills;skills" --add-data "bou-voice.png;." `
+            --add-data "bou-assistant.png;." `
+            --add-data "build-assets\whisper-small;models\whisper-small" `
+            bou_studio.py
+
+      - name: Install Inno Setup
+        run: choco install innosetup --yes --no-progress
+
+      - name: Build single-file installer
+        shell: pwsh
+        run: |
+          $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+          if (-not (Test-Path $iscc)) { throw "Inno Setup compiler was not installed." }
+          & $iscc "installer\BouAssistant.iss"
+          if ($LASTEXITCODE -ne 0) { throw "Inno Setup failed with exit code $LASTEXITCODE." }
+
+      - name: Upload installer artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Bou-AI-Assistant-Windows-x64
+          path: installer/output/Bou-AI-Assistant-Setup-x64-*.exe
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Publish GitHub release asset
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: pwsh
+        run: |
+          $installer = Get-ChildItem -Path "installer\output\Bou-AI-Assistant-Setup-x64-*.exe" | Select-Object -First 1
+          if (-not $installer) { throw "Installer asset was not created." }
+          gh release create "$env:GITHUB_REF_NAME" $installer.FullName --title "Bou AI Assistant $env:GITHUB_REF_NAME" --notes-file README-BN.md

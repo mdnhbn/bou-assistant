@@ -9,3 +9,4 @@ psutil
 keyring
 numpy
 faster-whisper
+opencv-python

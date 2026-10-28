@@ -474,8 +474,12 @@ class Engine:
             local_data=Path(os.environ.get("LOCALAPPDATA",str(Path.home()/"AppData"/"Local")))
             model_cache=local_data/"BouStudio"/"models"/"whisper"
             model_cache.mkdir(parents=True,exist_ok=True)
+            configured_model=os.environ.get("BOU_WHISPER_MODEL","small")
+            bundle_root=Path(getattr(sys,"_MEIPASS",str(ENGINE_DIR)))
+            bundled_model=bundle_root/"models"/"whisper-small"
+            model_source=str(bundled_model) if configured_model=="small" and bundled_model.is_dir() else configured_model
             self._whisper_model=WhisperModel(
-                os.environ.get("BOU_WHISPER_MODEL","small"),
+                model_source,
                 device="cpu",compute_type="int8",
                 cpu_threads=max(2,min(6,os.cpu_count() or 4)),
                 download_root=str(model_cache),
