@@ -1,4 +1,4 @@
-# Bou AI Assistant · 1.5.0
+# Bou AI Assistant · 1.6.0
 
 Bou is a Windows desktop assistant with local conversation memory and an optional hosted service. Provider API keys stay on the service server; customers connect with individual access tokens.
 
@@ -13,9 +13,9 @@ Bou is a Windows desktop assistant with local conversation memory and an optiona
 
 ## Desktop dashboard
 
-The 1.5.0 desktop screen uses a three-column layout inspired by the publicly visible Stonic product: a signal feed, Bou's animated character core and Agent Town, and the chat inspector. The feed reads public BBC World RSS headlines and links each headline to its BBC page. Search opens a browser results page; it does not give the AI an unrestricted web browser. The 2D/3D control changes a local activity illustration, not a live geographic map. Bou does not request GPS or camera access. Gesture toggles the character's idle animation; it is not camera-based gesture recognition.
+The 1.5.0 desktop screen uses a three-column layout inspired by the publicly visible Stonic product: a signal feed, Bou's animated character core and Agent Town, and the chat inspector. The feed reads public BBC World RSS headlines and links each headline to its BBC page. Search opens a browser results page; it does not give the AI an unrestricted web browser. The 2D/3D control changes a local activity illustration, not a live geographic map. Bou does not request GPS. Gesture toggles the character's idle animation; it is not camera-based gesture recognition.
 
-The layout and original Bou artwork are implemented in this project. Stonic release features not included in Bou 1.5.0 include phone calls, floating characters/live wallpaper, screen awareness, custom character personas, reminders, PDF/document attachments, full-page generated visuals, and web research inside AI answers.
+The layout and original Bou artwork are implemented in this project. Bou 1.6.0 adds a one-frame camera description and user-approved, one-action-at-a-time PC control. It does not keep ambient camera/microphone feeds or continuously monitor the screen. Other Stonic release features not included in Bou 1.6.0 include phone calls, floating characters/live wallpaper, custom character personas, reminders, PDF/document attachments, full-page generated visuals, and web research inside AI answers.
 
 ## Hosted service setup
 
@@ -36,9 +36,25 @@ For internet-facing use, place the service behind HTTPS and use persistent serve
 
 ## Local mode
 
-Run `Start-Bou.bat` on Windows. Local mode uses the existing OpenRouter key from the local installation. Worker roles and manager instructions can be edited in Bou. The hosted admin key pool is used only when the app is set to service mode.
+Run `Start-Bou.bat` on Windows. Local mode uses the existing OpenRouter key from the local installation. The launcher installs the optional OpenCV camera package if it is missing. Worker roles and manager instructions can be edited in Bou. The hosted admin key pool is used only when the app is set to service mode.
+
+## Camera, microphone, and PC control
+
+The Camera & PC page keeps camera access off until the user clicks **Capture one frame** and confirms. Bou captures one still, turns the camera off, previews the image, and sends it to the configured provider only after a second approval. The camera prompt asks for visible, non-sensitive details and does not identify the person. The image stays in memory and is not written to disk.
+
+Voice Studio remains manual push-to-talk for up to 12 seconds. Bou shows the transcription for review before the user moves it to chat; audio is sent to Google's speech recognition service and is not saved by Bou.
+
+PC control is off by default and enabled only for the current session. Before every AI planning call, Bou shows the screenshot and asks before sharing it with the configured provider. It then displays one proposed click, key, scroll, or text entry and waits for approval. After executing at most that one action, it stops until the user requests another screenshot. Screenshots and PC-task details are not added to the conversation archive. Passwords, one-time codes, payments, purchases, sending/publishing, deletions, installs, agreements, and security-setting changes are blocked for the user to handle directly.
 
 ## Changelog
+
+### 1.6.0 — Camera and confirmed PC control
+
+- Added a one-shot camera capture with a local preview and separate approval before sending the frame for a non-sensitive visual description.
+- Added a Camera & PC page, session-only PC-control toggle, screenshot-sharing approval, and one proposed action per review/approval cycle.
+- Added bounded click, typing, key, and scroll actions; Bou stops after one action and waits for the user before capturing another screen.
+- Kept microphone use manual, limited to 12 seconds, with transcript review; camera frames and desktop screenshots are not saved.
+- Added OpenCV bootstrap for the optional camera feature and updated the hosted image endpoint to distinguish camera, desktop-control, and ordinary image requests.
 
 ### 1.5.0 — Stonic-inspired desktop dashboard
 

@@ -1,4 +1,4 @@
-# Bou AI Assistant 1.5.0
+# Bou AI Assistant 1.6.0
 
 Bou হলো Windows desktop AI assistant, সঙ্গে conversation memory, Manager ও Worker দল, এবং বিক্রির জন্য ব্যবহারকারীভিত্তিক hosted service। Assistant-এর source, service, admin panel ও changelog এই repository-তে রাখা হয়।
 
@@ -6,7 +6,7 @@ Bou হলো Windows desktop AI assistant, সঙ্গে conversation memory,
 
 ### লোকাল ডেস্কটপ মোড
 
-Windows-এ `Start-Bou.bat` চালান। এই installation-এ আগে থেকে থাকা Python environment এবং `key.txt` ব্যবহার করে। Settings-এ `Assistant connection` হিসেবে `local` রাখুন। লোকাল মোডে সব AI call আপনার বিদ্যমান একক OpenRouter key দিয়ে হয়।
+Windows-এ `Start-Bou.bat` চালান। এই installation-এ আগে থেকে থাকা Python environment এবং `key.txt` ব্যবহার করে। Camera feature-এর OpenCV package না থাকলে launcher সেটি ইনস্টল করবে। Settings-এ `Assistant connection` হিসেবে `local` রাখুন। লোকাল মোডে সব AI call আপনার বিদ্যমান একক OpenRouter key দিয়ে হয়।
 
 ### Hosted service মোড
 
@@ -48,17 +48,33 @@ Hosted service chat transcript নিজে থেকে সংরক্ষণ �
 
 Voice, image analysis, activity log এবং Settings-এর আরও বিবরণ app-এর মধ্যে আছে।
 
+## ক্যামেরা, মাইক্রোফোন ও PC control
+
+`Camera & PC` পেজে **Capture one frame** চাপার পর নিশ্চিত করলেই ক্যামেরা একবার চালু হয়। Bou একটি still frame নিয়ে সঙ্গে সঙ্গে ক্যামেরা বন্ধ করে, ছবিটি local preview-তে দেখায় এবং AI provider-এ পাঠানোর আগে আবার অনুমতি চায়। উত্তরটি দৃশ্যমান, সংবেদনশীল নয় এমন বৈশিষ্ট্য—যেমন পোশাক, চুল, accessories ও ভঙ্গি—নিয়ে হয়; Bou ব্যক্তিকে শনাক্ত করে না। ছবিটি disk-এ লেখা হয় না।
+
+Voice Studio-র microphone আগের মতোই manual: Record চাপলে সর্বোচ্চ ১২ সেকেন্ড রেকর্ড হয়, transcript review না করা পর্যন্ত chat-এ পাঠানো হয় না। Audio Google speech recognition service-এ যায় এবং Bou সেটি save করে না। Always-on listening নেই।
+
+PC control default-এ বন্ধ এবং শুধু চলতি session-এ চালু হয়। প্রতিটি ধাপের আগে Bou screenshot দেখায়; AI-কে পাঠানোর অনুমতি চাইলে তবেই screenshot পাঠায়। AI একটি click, key, scroll বা text entry প্রস্তাব করে; Bou চালানোর আগে ওই একক action-এর জন্য আলাদা অনুমতি চায়। একটি action চালানোর পর থামে; পরের screenshot আপনি চাইলে তবেই নেয়। Screenshot বা PC task-এর বিবরণ chat archive-এ লেখা হয় না। Password/OTP, payment/কেনাকাটা, message পাঠানো বা প্রকাশ, file deletion, software install, agreement গ্রহণ ও security setting পরিবর্তন Bou block করে—এসব আপনি নিজে করবেন।
+
 ## Desktop dashboard
 
-1.5.0-তে public Stonic product-এ দেখা layout থেকে অনুপ্রাণিত হয়ে তিন-কলামের Bou dashboard করা হয়েছে: বামে signal feed, মাঝখানে animated character core ও Agent Town, ডানে Voice/Agent/Notes chat inspector। Today অংশে BBC World-এর public RSS headline দেখায়; শিরোনামে click করলে BBC page খোলে। Search browser-এর result page খোলে—AI নিজে unrestricted web browsing করে না। 2D/3D বোতামটি Bou-র local activity illustration বদলায়, real map নয়; GPS বা camera ব্যবহার হয় না। Gesture বোতাম character-এর idle animation চালু/বন্ধ করে, camera gesture শনাক্ত করে না। Feed ও chat panel লুকানো/দেখানোর control-ও আছে।
+1.5.0-তে public Stonic product-এ দেখা layout থেকে অনুপ্রাণিত হয়ে তিন-কলামের Bou dashboard করা হয়েছে: বামে signal feed, মাঝখানে animated character core ও Agent Town, ডানে Voice/Agent/Notes chat inspector। Today অংশে BBC World-এর public RSS headline দেখায়; শিরোনামে click করলে BBC page খোলে। Search browser-এর result page খোলে—AI নিজে unrestricted web browsing করে না। 2D/3D বোতামটি Bou-র local activity illustration বদলায়, real map নয়; GPS নেওয়া হয় না। Gesture বোতাম character-এর idle animation চালু/বন্ধ করে, camera gesture শনাক্ত করে না। Feed ও chat panel লুকানো/দেখানোর control-ও আছে।
 
-Stonic-এর release notes-এ থাকা phone call, সবসময় ভাসমান character/live wallpaper, screen awareness, নিজের persona বানানো, reminder, PDF/document attachment, পুরো visual page তৈরি, এবং AI উত্তরের ভেতরে web research—Bou 1.5.0-তে নেই। Paid activation-এর ভেতরের Stonic UI পরীক্ষা করা যায়নি; পরিবর্তনগুলো public site, changelog, onboarding screen ও Facebook ভিডিওতে দেখা অংশ থেকে নেওয়া।
+Bou 1.6.0-তে একবারের camera description এবং অনুমোদিত, একবারে এক action-এর PC control আছে। Always-on camera/microphone বা continuous screen monitoring নেই। Stonic-এর অন্য যেসব feature এখনও নেই: phone call, ভাসমান character/live wallpaper, নিজস্ব persona, reminder, PDF/document attachment, পুরো visual page তৈরি এবং AI উত্তরের ভেতরে web research। Paid activation-এর ভেতরের Stonic UI পরীক্ষা করা যায়নি; আগের visual comparison public site, changelog, onboarding screen ও Facebook ভিডিওতে দেখা অংশ থেকে নেওয়া।
 
 ## Source ও সংস্করণ
 
 মূল desktop assistant এবং নতুন Bou interface-এর source, service code, Docker configuration, admin UI ও প্রয়োজনীয় image এই repository-তে রাখা হয়। Secret key, `.env`, Python virtual environment, local database ও generated install flags `.gitignore` দিয়ে বাদ দেওয়া হয়। প্রতিটি release-এ সংস্করণ বাড়িয়ে এই README-এর Changelog-এ কী বদলেছে তা লিখুন।
 
 ## Changelog
+
+### 1.6.0 — Camera ও confirmed PC control
+
+- একবারের camera still, local preview এবং provider-এ পাঠানোর আগে আলাদা অনুমতি যোগ হয়েছে; পরিচয় বা সংবেদনশীল বৈশিষ্ট্য অনুমান করে না।
+- নতুন `Camera & PC` পেজ, session-only PC-control toggle এবং প্রতিটি screenshot share করার আগে approval যোগ হয়েছে।
+- AI একবারে একটি click, key, scroll বা text entry প্রস্তাব করে; কাজ করার আগে আলাদা approval নেয় এবং একটি action-এর পর থামে।
+- Microphone manual push-to-talk-ই আছে, সর্বোচ্চ ১২ সেকেন্ড এবং transcript review-সহ। Camera frame ও screenshot save হয় না।
+- Optional camera package install, hosted service-এ camera/screen-control purpose আলাদা করা এবং README আপডেট হয়েছে।
 
 ### 1.5.0 — Stonic-অনুপ্রাণিত desktop dashboard
 

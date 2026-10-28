@@ -21,7 +21,7 @@ except ImportError:
 BG="#090d16"; NAV="#0b111c"; CARD="#111a27"; CARD2="#192333"; LINE="#283342"
 TXT="#f2f4f8"; DIM="#9aa5b5"; ACCENT="#ed6a63"; BLUE="#86a9e8"; RED="#ff8f9f"
 FONT="Segoe UI"; BNFONT="Nirmala UI"
-PAGES=[("assistant","Assistant"),("workers","Workers"),("voice","Voice studio"),("memory","Memory"),("activity","Activity"),("settings","Settings")]
+PAGES=[("assistant","Assistant"),("workers","Workers"),("camera","Camera & PC"),("voice","Voice studio"),("memory","Memory"),("activity","Activity"),("settings","Settings")]
 STATUS={"completed":"Completed","failed":"Failed","running":"Running","submitted":"Sent to Windows","cancelled":"Cancelled","stopping":"Stopping","needs_review":"Needs review"}
 
 def label(parent,text,size=11,color=TXT,bg=None,bold=False,**kwargs):
@@ -38,7 +38,7 @@ def entry(parent):
 class App(tk.Tk):
     def __init__(self,store=None,engine=None):
         super().__init__()
-        self.title("বউ — AI Assistant 1.5.0")
+        self.title("বউ — AI Assistant 1.6.0")
         self.geometry("1600x920+40+40")
         self.minsize(1180,760)
         try:self.state("zoomed")
@@ -54,6 +54,10 @@ class App(tk.Tk):
         self.signal_view="today"; self.map_mode="3D"; self.gesture_enabled=True; self.headlines=[]; self.headlines_ready=False
         self.signal_panel_visible=True; self.inspector_visible=True
         self.task_label=""; self.preview_photo=None
+        self.camera_capture_id=None; self.camera_preview=None
+        self.pc_enabled_var=tk.BooleanVar(value=False); self.pc_busy=False; self.pc_run_id=None
+        self.pc_goal=""; self.pc_image=None; self.pc_screen_size=None; self.pc_stage="idle"
+        self.pc_share_window=None; self.pc_action_window=None
         self.setup_style()
         self.build_sidebar()
         self.build_inspector()
@@ -63,7 +67,7 @@ class App(tk.Tk):
         self.body=tk.Frame(self.host,bg=BG); self.body.pack(fill="both",expand=True)
         for key,_ in PAGES:
             f=tk.Frame(self.body,bg=BG); self.pages[key]=f
-        self.build_assistant(); self.build_workers(); self.build_voice(); self.build_memory(); self.build_activity(); self.build_settings()
+        self.build_assistant(); self.build_workers(); self.build_camera(); self.build_voice(); self.build_memory(); self.build_activity(); self.build_settings()
         self.show_page("assistant")
         for role,text in self.store.messages(): self.append_chat(role,text,save=False)
         self.refresh_memory(); self.refresh_activity(); self.update_connection()
@@ -86,7 +90,7 @@ class App(tk.Tk):
         logo.create_oval(13,13,31,31,fill=ACCENT,outline="")
         label(side,"BOU",9,ACCENT,bold=True).pack(pady=(0,22))
         self.nav={}
-        icons={"assistant":"⌂","workers":"⚒","voice":"◖","memory":"◈","activity":"◷","settings":"⚙"}
+        icons={"assistant":"⌂","workers":"⚒","camera":"◉","voice":"◖","memory":"◈","activity":"◷","settings":"⚙"}
         for key,title in PAGES:
             b=tk.Button(side,text=icons[key]+"\n"+title,command=lambda k=key:self.show_page(k),
                 relief="flat",bd=0,cursor="hand2",bg=NAV,fg=DIM,activebackground=CARD2,
@@ -231,6 +235,41 @@ class App(tk.Tk):
         self.transcript=textinput(f,6); self.transcript.pack(fill="both",expand=True)
         button(f,"Review in chat →",self.send_transcript).pack(anchor="e",pady=12)
         label(f,"Recording is sent to Google's speech recognition service. Audio is not saved by Bou.",9,DIM,wraplength=540,justify="left").pack(anchor="w",pady=6)
+    def build_camera(self):
+        f=self.pages["camera"]
+        label(f,"CAMERA · MICROPHONE · PC CONTROL",9,ACCENT,bold=True).pack(anchor="w",pady=(2,6))
+        label(f,"Your devices, only when you ask.",19,bold=True).pack(anchor="w")
+        label(f,"Camera and PC access start only after your click. Bou never keeps a live camera or microphone running.",10,DIM,wraplength=780,justify="left").pack(anchor="w",pady=(7,18))
+        camera_card=tk.Frame(f,bg=CARD,highlightthickness=1,highlightbackground=LINE,padx=18,pady=15)
+        camera_card.pack(fill="x",pady=(0,12))
+        label(camera_card,"ONE CAMERA FRAME",9,ACCENT,bold=True).pack(anchor="w")
+        label(camera_card,"Capture one still frame, review it here, then approve sending that frame to the AI provider for a description. Bou does not save the frame or identify who is shown.",10,DIM,wraplength=790,justify="left").pack(anchor="w",pady=(6,12))
+        row=tk.Frame(camera_card,bg=CARD); row.pack(fill="x")
+        self.camera_button=button(row,"Capture one frame",self.capture_camera,True); self.camera_button.pack(side="left")
+        self.camera_status=label(row,"Camera off",9,DIM); self.camera_status.pack(side="left",padx=12)
+        voice_card=tk.Frame(f,bg=CARD,highlightthickness=1,highlightbackground=LINE,padx=18,pady=14)
+        voice_card.pack(fill="x",pady=(0,12))
+        label(voice_card,"MANUAL MICROPHONE",9,ACCENT,bold=True).pack(anchor="w")
+        row=tk.Frame(voice_card,bg=CARD); row.pack(fill="x",pady=(5,0))
+        label(row,"Voice Studio records only after you press Record (up to 12 seconds); review the transcript before sending. Audio goes to Google's speech recognition service and is not saved.",10,DIM,wraplength=650,justify="left").pack(side="left",fill="x",expand=True)
+        button(row,"Open Voice Studio →",lambda:self.show_page("voice")).pack(side="right",padx=(12,0))
+        pc_card=tk.Frame(f,bg=CARD,highlightthickness=1,highlightbackground=ACCENT,padx=18,pady=15)
+        pc_card.pack(fill="both",expand=True)
+        label(pc_card,"CONFIRMED PC CONTROL",9,ACCENT,bold=True).pack(anchor="w")
+        label(pc_card,"Give Bou one task. For every step it will show you the screen before sharing it with the AI, then show one proposed click, key, scroll, or text entry and wait for your approval. After one approved action, Bou stops until you choose Continue.",10,DIM,wraplength=790,justify="left").pack(anchor="w",pady=(6,10))
+        tk.Checkbutton(pc_card,text="Enable confirmed PC control for this session",variable=self.pc_enabled_var,
+            command=self.toggle_pc_control,bg=CARD,fg=TXT,selectcolor=CARD2,activebackground=CARD,
+            activeforeground=TXT,font=(FONT,10,"bold")).pack(anchor="w",pady=(0,7))
+        label(pc_card,"Task for Bou",9,DIM).pack(anchor="w",pady=(2,5))
+        self.pc_goal_entry=textinput(pc_card,3); self.pc_goal_entry.pack(fill="x")
+        row=tk.Frame(pc_card,bg=CARD); row.pack(fill="x",pady=(10,4))
+        self.pc_start_button=button(row,"Start task",self.start_pc_task,True); self.pc_start_button.pack(side="left")
+        self.pc_continue_button=button(row,"Review next screen",self.continue_pc_task); self.pc_continue_button.pack(side="left",padx=7)
+        self.pc_stop_button=button(row,"Stop",self.stop_pc_task); self.pc_stop_button.pack(side="left")
+        self.pc_status=label(pc_card,"PC control is off.",9,DIM,wraplength=790,justify="left")
+        self.pc_status.pack(anchor="w",pady=(7,0))
+        label(pc_card,"Bou does not save screenshots. Passwords, payment, purchases, sending or publishing, deletion, installation, agreements, and security changes are blocked for direct handling by you.",9,DIM,wraplength=790,justify="left").pack(anchor="w",pady=(8,0))
+        self.update_pc_controls()
     def build_workers(self):
         outer=self.pages["workers"]
         scroll=tk.Canvas(outer,bg=BG,highlightthickness=0)
@@ -354,7 +393,7 @@ class App(tk.Tk):
         button(row,"Apply key",self.apply_key).pack(side="left")
         button(row,"Test connection",self.test_connection).pack(side="left",padx=8)
         label(f,"The existing engine key is used automatically. New keys entered here are kept only until you close Bou.",9,DIM,wraplength=550,justify="left").pack(anchor="w",pady=5)
-        label(f,"Capabilities: chat · translations · writing · explicit app launches · image analysis\nAutomatic PC control and messaging are not included.",9,DIM,wraplength=550,justify="left").pack(anchor="w",pady=10)
+        label(f,"Capabilities: chat · translations · writing · explicit app launches · image analysis · one-shot camera · approved one-step PC control",9,DIM,wraplength=550,justify="left").pack(anchor="w",pady=10)
     def show_page(self,key):
         for f in self.pages.values(): f.pack_forget()
         self.pages[key].pack(fill="both",expand=True)
@@ -366,7 +405,7 @@ class App(tk.Tk):
             else:self.signal_panel.pack_forget()
         else:
             self.inspector.pack_forget()
-        titles={"assistant":"BOU  /  DESKTOP COMPANION","workers":"BOU  /  AGENT TOWN","voice":"BOU  /  VOICE STUDIO","memory":"BOU  /  PERSONAL MEMORY","activity":"BOU  /  YOUR ACTIVITY","settings":"BOU  /  PREFERENCES"}
+        titles={"assistant":"BOU  /  DESKTOP COMPANION","workers":"BOU  /  AGENT TOWN","camera":"BOU  /  CAMERA & PC CONTROL","voice":"BOU  /  VOICE STUDIO","memory":"BOU  /  PERSONAL MEMORY","activity":"BOU  /  YOUR ACTIVITY","settings":"BOU  /  PREFERENCES"}
         self.page_title.configure(text=titles[key])
         for k,b in self.nav.items():
             b.configure(bg=CARD2 if k==key else NAV,fg=ACCENT if k==key else DIM)
@@ -450,8 +489,8 @@ class App(tk.Tk):
     def send(self):
         text=self.prompt.get("1.0","end").strip()
         if text and self.submit(text): self.prompt.delete("1.0","end")
-    def submit(self,text,kind="chat",image=None):
-        if self.busy or self.recording or self.voice_busy:
+    def submit(self,text,kind="chat",image=None,purpose="image"):
+        if self.busy or self.recording or self.voice_busy or self.pc_busy or self.camera_capture_id:
             self.notify("একটি কাজ চলছে। শেষ হওয়া পর্যন্ত অপেক্ষা করুন।",True); return False
         self.busy=True; self.engine.cancel_event.clear(); self.current_task=str(uuid.uuid4()); self.task_label=text
         settings=self.settings.copy()
@@ -465,13 +504,24 @@ class App(tk.Tk):
         self.notify("Working… Stop দিয়ে চলতি উত্তর বাতিল করতে পারেন।")
         def work():
             try:
-                result=self.engine.analyze(image,settings) if kind=="image" else self.engine.execute(
+                result=self.engine.analyze(image,settings,prompt=text,purpose=purpose) if kind=="image" else self.engine.execute(
                     text,settings,history,notes,progress=lambda worker_id,state:self.events.put(("worker_status",(task_id,worker_id,state))))
             except Exception as exc: result={"status":"failed","text":"Request failed ("+type(exc).__name__+")."}
             self.events.put(("result",(task_id,result)))
         threading.Thread(target=work,daemon=True).start()
         return True
     def stop(self):
+        if self.camera_capture_id:
+            self.camera_capture_id=None; self.camera_button.configure(state="normal")
+            self.camera_status.configure(text="Camera off · capture discarded",fg=DIM)
+            self.notify("Camera frame discarded."); return
+        if self.camera_preview:
+            try:self.camera_preview.destroy()
+            except tk.TclError:pass
+            self.camera_preview=None; self.camera_status.configure(text="Camera off · frame discarded",fg=DIM)
+            return
+        if self.pc_busy:
+            self.stop_pc_task(); return
         self.engine.cancel()
         if self.busy and self.current_task:
             self.store.task(self.current_task,self.task_label,"stopping")
@@ -488,7 +538,7 @@ class App(tk.Tk):
     def record(self):
         if self.recording:
             self.engine.record_stop.set(); self.record_button.configure(state="disabled"); return
-        if self.busy or self.voice_busy: self.notify("Wait for the current task to finish.",True); return
+        if self.busy or self.voice_busy or self.pc_busy or self.camera_capture_id: self.notify("Wait for the current task to finish.",True); return
         self.recording=True; self.engine.cancel_event.clear()
         self.record_button.configure(text="Finish recording")
         self.set_phase("Recording","Up to 12 seconds. Press Finish when done.")
@@ -503,7 +553,7 @@ class App(tk.Tk):
         text=self.transcript.get("1.0","end").strip()
         if text: self.fill_prompt(text)
     def choose_image(self):
-        if self.busy: self.notify("Wait for the current request.",True); return
+        if self.busy or self.pc_busy: self.notify("Wait for the current request.",True); return
         if not Image: self.notify("Pillow is not installed.",True); return
         path=filedialog.askopenfilename(title="Choose an image to analyze",filetypes=[("Images","*.png *.jpg *.jpeg *.webp")])
         if not path: return
@@ -519,6 +569,136 @@ class App(tk.Tk):
         def confirm():
             win.destroy(); self.show_page("assistant"); self.submit("এই ছবিটি বুঝিয়ে বলো।","image",image)
         button(win,"Analyze this image",confirm,True).pack(pady=15)
+    def capture_camera(self):
+        if self.busy or self.recording or self.voice_busy or self.pc_busy or self.camera_capture_id:
+            self.notify("অন্য একটি কাজ শেষ হলে ক্যামেরা ব্যবহার করুন।",True); return
+        if not Image or not ImageTk:
+            self.notify("ছবি দেখার জন্য Pillow ইনস্টল নেই।",True); return
+        if not messagebox.askyesno("Use camera once","Bou will open the default camera, capture one still frame, and turn the camera off. Continue?"):
+            return
+        request_id=str(uuid.uuid4()); self.camera_capture_id=request_id
+        self.camera_button.configure(state="disabled"); self.camera_status.configure(text="Capturing one frame…",fg=ACCENT)
+        def work():
+            try:self.events.put(("camera_frame",(request_id,self.engine.capture_camera_frame(),"")))
+            except Exception as exc:self.events.put(("camera_frame",(request_id,None,str(exc))))
+        threading.Thread(target=work,name="bou-camera-one-frame",daemon=True).start()
+    def show_camera_review(self,image):
+        win=tk.Toplevel(self); win.title("Review camera frame"); win.configure(bg=BG); win.transient(self); win.grab_set()
+        preview=image.copy(); preview.thumbnail((850,500)); photo=ImageTk.PhotoImage(preview)
+        view=tk.Label(win,image=photo,bg=BG); view.image=photo; view.pack(padx=18,pady=(18,8))
+        label(win,"This single frame will be sent to the configured AI provider only if you approve. Bou will describe visible, non-sensitive details; it does not save the frame or identify the person.",10,DIM,wraplength=760,justify="left").pack(padx=18,pady=8)
+        row=tk.Frame(win,bg=BG); row.pack(pady=(2,16))
+        def cancel():
+            self.camera_preview=None; win.destroy(); self.camera_status.configure(text="Camera off · frame discarded",fg=DIM)
+        def confirm():
+            self.camera_preview=None; win.destroy(); self.camera_status.configure(text="Camera off · frame approved for analysis",fg=DIM)
+            self.show_page("assistant")
+            self.submit("এই ক্যামেরার ছবিতে দৃশ্যমান পোশাক, চুল, accessories ও ভঙ্গি বাংলায় নিরপেক্ষভাবে বর্ণনা করো।","image",image,purpose="camera")
+        button(row,"Discard frame",cancel).pack(side="left",padx=5)
+        button(row,"Send this frame for description",confirm,True).pack(side="left",padx=5)
+        win.protocol("WM_DELETE_WINDOW",cancel); self.camera_preview=win
+    def update_pc_controls(self):
+        enabled=self.pc_enabled_var.get() and not self.pc_busy
+        self.pc_start_button.configure(state="normal" if enabled else "disabled")
+        self.pc_continue_button.configure(state="normal" if self.pc_enabled_var.get() and self.pc_busy and self.pc_stage=="waiting" else "disabled")
+        self.pc_stop_button.configure(state="normal" if self.pc_busy else "disabled")
+    def toggle_pc_control(self):
+        if not self.pc_enabled_var.get() and self.pc_busy:self.stop_pc_task()
+        self.update_pc_controls()
+    def start_pc_task(self):
+        if not self.pc_enabled_var.get():return
+        if self.busy or self.recording or self.voice_busy or self.pc_busy:
+            self.notify("অন্য একটি কাজ শেষ হলে PC control শুরু করুন।",True); return
+        goal=self.pc_goal_entry.get("1.0","end").strip()
+        if not goal:self.pc_status.configure(text="প্রথমে Bou-কে একটি PC task লিখুন।",fg=RED); return
+        if self.engine._blocked_pc_request(goal):
+            self.pc_status.configure(text="এই কাজটি Bou করবে না। সংবেদনশীল বা ঝুঁকিপূর্ণ ধাপ আপনাকেই করতে হবে।",fg=RED); return
+        self.engine.cancel_event.clear(); self.pc_run_id=str(uuid.uuid4()); self.pc_goal=goal
+        self.pc_busy=True; self.pc_stage="capturing"; self.pc_status.configure(text="একটি screenshot প্রস্তুত হচ্ছে; পাঠানোর আগে আপনি সেটি দেখবেন।",fg=ACCENT)
+        self.update_pc_controls(); self.request_pc_frame()
+    def continue_pc_task(self):
+        if not self.pc_busy or self.pc_stage!="waiting" or not self.pc_enabled_var.get():return
+        self.pc_stage="capturing"; self.pc_status.configure(text="পরের একক ধাপের জন্য নতুন screenshot প্রস্তুত হচ্ছে।",fg=ACCENT)
+        self.update_pc_controls(); self.request_pc_frame()
+    def request_pc_frame(self):
+        run_id=self.pc_run_id
+        self.iconify()
+        def work():
+            try:
+                time.sleep(0.45)
+                image=self.engine.capture_screen_frame()
+                screen_size=image.info.get("bou_screen_size",image.size)
+                self.events.put(("pc_screen_frame",(run_id,image,screen_size,"")))
+            except Exception as exc:self.events.put(("pc_screen_frame",(run_id,None,None,str(exc))))
+        threading.Thread(target=work,name="bou-screen-review",daemon=True).start()
+    def show_pc_share_review(self,image,screen_size):
+        win=tk.Toplevel(self); win.title("Review screen before sharing"); win.configure(bg=BG); win.transient(self); win.grab_set()
+        preview=image.copy(); preview.thumbnail((900,520)); photo=ImageTk.PhotoImage(preview)
+        view=tk.Label(win,image=photo,bg=BG); view.image=photo; view.pack(padx=18,pady=(18,8))
+        label(win,"Review this screen. Only if you approve, Bou will send this screenshot and your current task to the configured AI provider to propose one action. The screenshot is not saved.",10,DIM,wraplength=800,justify="left").pack(padx=18,pady=8)
+        row=tk.Frame(win,bg=BG); row.pack(pady=(2,16))
+        def cancel():
+            self.pc_share_window=None; self.pc_image=None; self.pc_stage="waiting"
+            self.pc_status.configure(text="Screenshot discarded. Choose Review next screen when you are ready.",fg=DIM)
+            win.destroy(); self.update_pc_controls()
+        def share():
+            self.pc_share_window=None; win.destroy(); self.pc_image=image; self.pc_screen_size=screen_size; self.pc_stage="planning"
+            self.pc_status.configure(text="Screenshot approved for one AI plan; no PC action has been taken.",fg=ACCENT)
+            run_id=self.pc_run_id; goal=self.pc_goal; settings=self.settings.copy()
+            def work():
+                try:result=self.engine.plan_pc_action(image,goal,settings)
+                except Exception as exc:result={"status":"failed","text":"Request failed ("+type(exc).__name__+")."}
+                self.events.put(("pc_plan",(run_id,result)))
+            threading.Thread(target=work,name="bou-pc-action-plan",daemon=True).start()
+        button(row,"Discard screenshot",cancel).pack(side="left",padx=5)
+        button(row,"Share and propose one action",share,True).pack(side="left",padx=5)
+        win.protocol("WM_DELETE_WINDOW",cancel); self.pc_share_window=win
+    def show_pc_action_review(self,action):
+        image=self.pc_image
+        if image is None:self.stop_pc_task(); return
+        win=tk.Toplevel(self); win.title("Approve one PC action"); win.configure(bg=BG); win.transient(self); win.grab_set()
+        preview=image.copy(); preview.thumbnail((900,480)); photo=ImageTk.PhotoImage(preview)
+        view=tk.Label(win,image=photo,bg=BG); view.image=photo; view.pack(padx=18,pady=(18,8))
+        kind=action["action"]
+        if kind=="click":detail=f"Click once at ({action['x']}, {action['y']}) in the reviewed screenshot."
+        elif kind=="type":detail="Type exactly: “"+action["text"]+"”"
+        elif kind=="press":detail="Press the “"+action["key"]+"” key once."
+        else:detail=f"Move to ({action['x']}, {action['y']}) and scroll {action['direction']} {action['amount']} step(s)."
+        label(win,"PROPOSED ACTION",9,ACCENT,bold=True).pack(anchor="w",padx=18)
+        label(win,detail,11,TXT,wraplength=820,justify="left").pack(anchor="w",padx=18,pady=(5,3))
+        label(win,"Why: "+action.get("reason",""),9,DIM,wraplength=820,justify="left").pack(anchor="w",padx=18,pady=(0,8))
+        label(win,"Bou will do only this one action and then wait. Check that the action matches your task and that no sensitive screen content is exposed.",9,DIM,wraplength=820,justify="left").pack(anchor="w",padx=18,pady=(0,8))
+        row=tk.Frame(win,bg=BG); row.pack(pady=(2,16))
+        def cancel():
+            self.pc_action_window=None; self.pc_image=None; self.pc_stage="waiting"
+            self.pc_status.configure(text="Action declined. Nothing was done. You can review a fresh screen or stop.",fg=DIM)
+            win.destroy(); self.update_pc_controls()
+        def approve():
+            self.pc_action_window=None; win.destroy(); self.pc_stage="acting"
+            self.pc_status.configure(text="You approved one action. Bou is sending it to Windows now.",fg=ACCENT)
+            run_id=self.pc_run_id; size=image.size; screen_size=self.pc_screen_size
+            self.iconify()
+            def work():
+                try:
+                    time.sleep(0.45)
+                    result={"ok":True,"text":self.engine.perform_pc_action(action,size,screen_size)}
+                except Exception as exc:result={"ok":False,"text":"Action failed ("+type(exc).__name__+")."}
+                self.events.put(("pc_action_done",(run_id,result)))
+            threading.Thread(target=work,name="bou-approved-pc-action",daemon=True).start()
+        button(row,"Decline action",cancel).pack(side="left",padx=5)
+        button(row,"Approve this one action",approve,True).pack(side="left",padx=5)
+        win.protocol("WM_DELETE_WINDOW",cancel); self.pc_action_window=win
+    def stop_pc_task(self):
+        if not self.pc_busy:return
+        self.engine.cancel()
+        for win in (self.pc_share_window,self.pc_action_window):
+            if win:
+                try:win.grab_release(); win.destroy()
+                except tk.TclError:pass
+        self.pc_share_window=None; self.pc_action_window=None; self.pc_image=None
+        self.pc_busy=False; self.pc_stage="idle"; self.pc_goal=""; self.pc_run_id=None
+        self.pc_status.configure(text="PC control stopped. No further action will run.",fg=DIM)
+        self.update_pc_controls()
     def refresh_memory(self):
         self.note_list.delete(*self.note_list.get_children())
         notes=self.store.notes()
@@ -684,6 +864,53 @@ class App(tk.Tk):
                 elif kind=="headlines":
                     self.headlines=data; self.headlines_ready=True
                     if self.signal_view=="today":self.refresh_activity()
+                elif kind=="camera_frame":
+                    request_id,image,error=data
+                    if request_id!=self.camera_capture_id:continue
+                    self.camera_capture_id=None; self.camera_button.configure(state="normal")
+                    if error:
+                        self.camera_status.configure(text="Camera off · capture failed",fg=RED)
+                        self.notify("ক্যামেরা frame নেওয়া যায়নি: "+error,True)
+                    else:
+                        self.camera_status.configure(text="Camera off · review frame",fg=DIM)
+                        self.show_camera_review(image)
+                elif kind=="pc_screen_frame":
+                    run_id,image,screen_size,error=data
+                    try:self.deiconify(); self.lift()
+                    except tk.TclError:pass
+                    if not self.pc_busy or run_id!=self.pc_run_id:continue
+                    if error:
+                        self.pc_stage="waiting"; self.pc_status.configure(text="Screenshot capture failed ("+error+").",fg=RED)
+                        self.update_pc_controls()
+                    else:
+                        self.pc_image=image; self.pc_screen_size=screen_size
+                        self.show_pc_share_review(image,screen_size)
+                elif kind=="pc_plan":
+                    run_id,result=data
+                    if not self.pc_busy or run_id!=self.pc_run_id:continue
+                    if result.get("status")=="completed" and isinstance(result.get("action"),dict):
+                        action=result["action"]
+                        if action.get("action")=="done":
+                            self.pc_busy=False; self.pc_stage="idle"; self.pc_goal=""; self.pc_image=None; self.pc_run_id=None
+                            self.pc_status.configure(text="Task complete: "+action.get("summary","Bou reports the task is complete."),fg=ACCENT)
+                            self.update_pc_controls()
+                        else:self.show_pc_action_review(action)
+                    else:
+                        self.pc_image=None; self.pc_stage="waiting"
+                        status="blocked" if result.get("status")=="blocked" else "failed"
+                        self.pc_status.configure(text=result.get("text") or result.get("action",{}).get("reason","Bou could not propose a safe step."),fg=RED)
+                        if status=="blocked":
+                            self.pc_busy=False; self.pc_stage="idle"; self.pc_goal=""; self.pc_run_id=None
+                            self.pc_status.configure(text="Bou paused this task for your direct attention.",fg=RED)
+                        self.update_pc_controls()
+                elif kind=="pc_action_done":
+                    run_id,result=data
+                    try:self.deiconify(); self.lift()
+                    except tk.TclError:pass
+                    if not self.pc_busy or run_id!=self.pc_run_id:continue
+                    self.pc_image=None; self.pc_stage="waiting"
+                    self.pc_status.configure(text=result.get("text","Action finished.")+" Select Review next screen for another step.",fg=ACCENT if result.get("ok") else RED)
+                    self.update_pc_controls()
                 elif kind in ("transcript","voice_error"):
                     self.recording=False; self.record_button.configure(text="Record voice",state="normal")
                     cancelled=self.engine.cancel_event.is_set()
@@ -701,7 +928,7 @@ class App(tk.Tk):
         def worker():
             items=[]
             try:
-                request=Request("https://feeds.bbci.co.uk/news/world/rss.xml",headers={"User-Agent":"BouAssistant/1.5.0 (public RSS headlines)"})
+                request=Request("https://feeds.bbci.co.uk/news/world/rss.xml",headers={"User-Agent":"BouAssistant/1.6.0 (public RSS headlines)"})
                 with urlopen(request,timeout=8) as response:raw=response.read(1_500_000)
                 root=ET.fromstring(raw)
                 for item in root.findall("./channel/item")[:5]:
