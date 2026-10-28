@@ -1,5 +1,5 @@
 """Bounded adapter to the existing Makima engine. No arbitrary shell or autonomous actions."""
-import os, sys, json, re, threading, datetime, subprocess, webbrowser, urllib.parse, io, base64, time
+import os, sys, json, re, threading, datetime, subprocess, webbrowser, urllib.parse, io, base64, time, wave, array, math
 from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor, as_completed
 ENGINE_DIR=Path(os.environ.get("MAKIMA_ENGINE_DIR",Path(__file__).parent))
@@ -9,6 +9,10 @@ try:
     import cv2
 except ImportError:
     cv2=None
+try:
+    import keyring
+except ImportError:
+    keyring=None
 
 ERROR_PREFIXES=("No API key","The API key was rejected","AI error:","The request timed out","No internet connection","Unexpected error:","No answer received","I got an empty answer")
 class Engine:
@@ -17,6 +21,13 @@ class Engine:
         self.cancel_event=threading.Event()
         self.record_stop=threading.Event()
         self.api_key=os.environ.get("OPENROUTER_API_KEY","").strip()
+        self.wispr_api_key=os.environ.get("WISPR_FLOW_API_KEY","").strip()
+        if not self.api_key and keyring:
+            try:self.api_key=keyring.get_password("Bou AI Assistant","openrouter-api-key") or ""
+            except Exception:self.api_key=""
+        if not self.wispr_api_key and keyring:
+            try:self.wispr_api_key=keyring.get_password("Bou AI Assistant","wisprflow-api-key") or ""
+            except Exception:self.wispr_api_key=""
         if not self.api_key and Path(mk.KEY_FILE).exists():
             self.api_key=Path(mk.KEY_FILE).read_text(encoding="utf-8").strip()
         mk.state["speech_out"]=False
@@ -27,6 +38,28 @@ class Engine:
         skill_path=Path(__file__).parent/"skills"/"desktop-control"/"SKILL.md"
         try:self.desktop_control_skill=skill_path.read_text(encoding="utf-8")[:12000]
         except OSError:self.desktop_control_skill=""
+    def save_api_key(self,key):
+        value=str(key).strip()
+        if not value:raise ValueError("Paste an OpenRouter API key first.")
+        if not keyring:raise RuntimeError("Secure key storage is unavailable. Install the keyring package.")
+        keyring.set_password("Bou AI Assistant","openrouter-api-key",value)
+        self.api_key=value; mk.API_KEY=value
+    def remove_saved_api_key(self):
+        if not keyring:raise RuntimeError("Secure key storage is unavailable.")
+        try:keyring.delete_password("Bou AI Assistant","openrouter-api-key")
+        except keyring.errors.PasswordDeleteError:pass
+        self.api_key=""; mk.API_KEY=""
+    def save_wispr_api_key(self,key):
+        value=str(key).strip()
+        if not value:raise ValueError("Paste an approved Wispr Flow API key first.")
+        if not keyring:raise RuntimeError("Secure key storage is unavailable. Install the keyring package.")
+        keyring.set_password("Bou AI Assistant","wisprflow-api-key",value)
+        self.wispr_api_key=value
+    def remove_saved_wispr_api_key(self):
+        if not keyring:raise RuntimeError("Secure key storage is unavailable.")
+        try:keyring.delete_password("Bou AI Assistant","wisprflow-api-key")
+        except keyring.errors.PasswordDeleteError:pass
+        self.wispr_api_key=""
     def cancel(self):
         self.cancel_event.set()
         self.record_stop.set()
@@ -422,7 +455,34 @@ class Engine:
         if not mk.tts_neural(text[:1500]) and not self.cancel_event.is_set():
             # Only the interruptible neural voice is used by this interface.
             raise RuntimeError("Voice service unavailable; the text reply is still available.")
-    def record(self,language,events):
+    def _transcribe_audio(self,raw,provider,language):
+        if not mk.sr:raise RuntimeError("SpeechRecognition is not installed.")
+        audio=mk.sr.AudioData(raw,16000,2)
+        if provider=="google":
+            recognizer=mk.sr.Recognizer(); recognizer.operation_timeout=15
+            try:return recognizer.recognize_google(audio,language=language)
+            except mk.sr.UnknownValueError:return ""
+        if provider!="wispr":raise RuntimeError("Choose Wispr Flow or Google Speech Recognition in Settings.")
+        if not self.wispr_api_key:raise RuntimeError("Wispr Flow API key is missing. Add an approved key in Settings.")
+        wav_buffer=io.BytesIO()
+        with wave.open(wav_buffer,"wb") as wav_file:
+            wav_file.setnchannels(1); wav_file.setsampwidth(2); wav_file.setframerate(16000); wav_file.writeframes(raw)
+        encoded=base64.b64encode(wav_buffer.getvalue()).decode("ascii")
+        lang="bn" if language.lower().startswith("bn") else "en"
+        payload={"audio":encoded,"language":[lang,"en" if lang=="bn" else "bn"],
+            "context":{"app":{"name":"Bou","type":"ai"}},
+            "properties":{"language":lang,"app_type":"ai","dictionary":[]}}
+        response=mk.requests.post("https://platform-api.wisprflow.ai/api/v1/dash/api",
+            headers={"Authorization":"Bearer "+self.wispr_api_key,"Accept":"application/json"},
+            json=payload,timeout=(8,30))
+        if response.status_code==401:raise RuntimeError("Wispr Flow rejected the API key.")
+        if response.status_code==403:raise RuntimeError("Wispr Flow API access is not enabled for this account.")
+        if response.status_code==429:raise RuntimeError("Wispr Flow API usage limit reached.")
+        response.raise_for_status()
+        result=response.json(); text=str(result.get("text","")).strip()
+        if not text:raise RuntimeError("Wispr Flow returned an empty transcript.")
+        return text
+    def record(self,language,events,provider="google"):
         if not mk.sd or not mk.sr: raise RuntimeError("Microphone packages are missing.")
         self.record_stop.clear()
         chunks=[]
@@ -432,7 +492,47 @@ class Engine:
                 chunks.append(bytes(stream.read(1600)[0]))
         if self.cancel_event.is_set() or not chunks: return ""
         events.put(("phase","Recognizing speech"))
-        recognizer=mk.sr.Recognizer()
-        recognizer.operation_timeout=15
-        audio=mk.sr.AudioData(b"".join(chunks),16000,2)
-        return recognizer.recognize_google(audio,language=language)
+        return self._transcribe_audio(b"".join(chunks),provider,language)
+    @staticmethod
+    def _rms(raw):
+        values=array.array("h",raw)
+        return math.sqrt(sum(value*value for value in values)/len(values)) if values else 0.0
+    def listen_continuously(self,stop_event,pause_event,language,provider,events):
+        if not mk.sd or not mk.sr:raise RuntimeError("Microphone packages are missing.")
+        if provider=="wispr" and not self.wispr_api_key:raise RuntimeError("Wispr Flow API key is missing. Add an approved key in Settings.")
+        rate,block=16000,1600
+        with mk.sd.RawInputStream(samplerate=rate,channels=1,dtype="int16",blocksize=block) as stream:
+            ambient=[]
+            for _ in range(10):
+                if stop_event.is_set():return
+                ambient.append(self._rms(bytes(stream.read(block)[0])))
+            noise=max(12.0,sum(ambient)/len(ambient))
+            threshold=max(65.0,noise*2.8)
+            events.put(("voice_session_ready",None))
+            preroll=[]; frames=[]; started=False; loud=0; silence=0; phrase_blocks=0
+            while not stop_event.is_set():
+                data=bytes(stream.read(block)[0]); level=self._rms(data)
+                if pause_event.is_set():
+                    preroll=[]; frames=[]; started=False; loud=0; silence=0; phrase_blocks=0
+                    noise=max(12.0,noise*0.995+level*0.005); threshold=max(65.0,noise*2.8)
+                    continue
+                if not started:
+                    preroll=(preroll+[data])[-4:]
+                    noise=max(12.0,noise*0.995+level*0.005); threshold=max(65.0,noise*2.8)
+                    loud=loud+1 if level>threshold else 0
+                    if loud>=2:
+                        started=True; frames=preroll[:]; phrase_blocks=len(frames); silence=0
+                    continue
+                frames.append(data); phrase_blocks+=1
+                silence=silence+1 if level<threshold else 0
+                if silence>=9 or phrase_blocks>=150:
+                    raw=b"".join(frames)
+                    preroll=[]; frames=[]; started=False; loud=0; silence=0; phrase_blocks=0
+                    if len(raw)<block*5:continue
+                    pause_event.set(); events.put(("voice_auto_status","Transcribing with "+("Wispr Flow" if provider=="wispr" else "Google Speech Recognition")))
+                    try:
+                        text=self._transcribe_audio(raw,provider,language)
+                        events.put(("voice_auto_transcript",text)) if text else events.put(("voice_auto_empty",None))
+                    except Exception as exc:
+                        events.put(("voice_auto_error",str(exc)[:180]))
+        events.put(("voice_session_stopped",None))

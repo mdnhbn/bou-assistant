@@ -1,4 +1,4 @@
-# Bou AI Assistant · 1.6.0
+# Bou AI Assistant · 1.7.0
 
 Bou is a Windows desktop assistant with local conversation memory and an optional hosted service. Provider API keys stay on the service server; customers connect with individual access tokens.
 
@@ -15,7 +15,7 @@ Bou is a Windows desktop assistant with local conversation memory and an optiona
 
 The 1.5.0 desktop screen uses a three-column layout inspired by the publicly visible Stonic product: a signal feed, Bou's animated character core and Agent Town, and the chat inspector. The feed reads public BBC World RSS headlines and links each headline to its BBC page. Search opens a browser results page; it does not give the AI an unrestricted web browser. The 2D/3D control changes a local activity illustration, not a live geographic map. Bou does not request GPS. Gesture toggles the character's idle animation; it is not camera-based gesture recognition.
 
-The layout and original Bou artwork are implemented in this project. Bou 1.6.0 adds a one-frame camera description and user-approved, one-action-at-a-time PC control. It does not keep ambient camera/microphone feeds or continuously monitor the screen. Other Stonic release features not included in Bou 1.6.0 include phone calls, floating characters/live wallpaper, custom character personas, reminders, PDF/document attachments, full-page generated visuals, and web research inside AI answers.
+The layout and original Bou artwork are implemented in this project. Bou 1.6.0 added one-frame camera description and user-approved, one-action-at-a-time PC control. Bou 1.7.0 adds a spoken startup greeting and a configurable live microphone conversation; camera capture is still one-shot, and screen monitoring is not continuous. Other Stonic release features not included in Bou include phone calls, floating characters/live wallpaper, custom character personas, reminders, PDF/document attachments, full-page generated visuals, and web research inside AI answers.
 
 ## Hosted service setup
 
@@ -42,11 +42,21 @@ Run `Start-Bou.bat` on Windows. Local mode uses the existing OpenRouter key from
 
 The Camera & PC page keeps camera access off until the user clicks **Capture one frame** and confirms. Bou captures one still, turns the camera off, previews the image, and sends it to the configured provider only after a second approval. The camera prompt asks for visible, non-sensitive details and does not identify the person. The image stays in memory and is not written to disk.
 
-Voice Studio remains manual push-to-talk for up to 12 seconds. Bou shows the transcription for review before the user moves it to chat; audio is sent to Google's speech recognition service and is not saved by Bou.
+Bou speaks a welcome when it opens, then starts a live microphone session by default if enabled in Settings. Speak naturally; when a phrase ends, Bou transcribes it, displays the words in chat, sends the text to the configured AI provider, and speaks the answer. The **Mic** button pauses or resumes listening. Raw microphone audio is not saved by Bou.
+
+Wispr Flow Voice Interface API is the default transcription provider. It requires approved Wispr API access and a key; usage may be billed. Save the key through Settings to the current session or Windows Credential Manager. Without a key, Bou will still greet you but will not send microphone audio to another service. Google Speech Recognition is an optional provider that sends audio to Google; Bou does not silently fall back to it.
 
 PC control is off by default and enabled only for the current session. Before every AI planning call, Bou shows the screenshot and asks before sharing it with the configured provider. It then displays one proposed click, key, scroll, or text entry and waits for approval. After executing at most that one action, it stops until the user requests another screenshot. Screenshots and PC-task details are not added to the conversation archive. Passwords, one-time codes, payments, purchases, sending/publishing, deletions, installs, agreements, and security-setting changes are blocked for the user to handle directly.
 
 ## Changelog
+
+### 1.7.0 — Live voice conversation and Wispr Flow API
+
+- Added a spoken startup greeting, controlled by the **Speak AI replies and startup greeting** setting.
+- Added automatic live microphone startup by default, with a global **Mic** button to pause and resume.
+- Added phrase-end voice detection, transcription, automatic chat submission, and spoken AI replies; no Record or Send click is required.
+- Added the official Wispr Flow Voice Interface API transcription adapter and secure API key storage through Windows Credential Manager.
+- Kept Google Speech Recognition as an explicit alternative; without a Wispr key, audio is not silently sent to another transcription service.
 
 ### 1.6.0 — Camera and confirmed PC control
 

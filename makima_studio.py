@@ -38,7 +38,7 @@ def entry(parent):
 class App(tk.Tk):
     def __init__(self,store=None,engine=None):
         super().__init__()
-        self.title("বউ — AI Assistant 1.6.0")
+        self.title("বউ — AI Assistant 1.7.0")
         self.geometry("1600x920+40+40")
         self.minsize(1180,760)
         try:self.state("zoomed")
@@ -50,6 +50,8 @@ class App(tk.Tk):
         self.engine=engine or Engine()
         self.events=queue.Queue()
         self.busy=False; self.recording=False; self.voice_busy=False; self.closing=False
+        self.voice_session_active=False; self.voice_session_stop=threading.Event(); self.voice_pause=threading.Event(); self.voice_pause.set()
+        self.live_voice_buttons=[]
         self.current_task=None; self.phase=0; self.orbs=[]; self.page="assistant"; self.selected_note=None
         self.signal_view="today"; self.map_mode="3D"; self.gesture_enabled=True; self.headlines=[]; self.headlines_ready=False
         self.signal_panel_visible=True; self.inspector_visible=True
@@ -72,6 +74,7 @@ class App(tk.Tk):
         for role,text in self.store.messages(): self.append_chat(role,text,save=False)
         self.refresh_memory(); self.refresh_activity(); self.update_connection()
         self.after(80,self.poll); self.after(60,self.animate); self.after(1000,self.stats); self.after(700,self.fetch_headlines)
+        self.after(900,self.startup_voice)
         self.protocol("WM_DELETE_WINDOW",self.on_close)
         self.bind("<Escape>",lambda event:self.stop())
     def setup_style(self):
@@ -142,6 +145,8 @@ class App(tk.Tk):
         self.page_title=label(row,"BOU  /  DESKTOP COMPANION",13,bold=True)
         self.page_title.pack(side="left")
         self.panel_buttons=tk.Frame(row,bg=BG); self.panel_buttons.pack(side="right")
+        self.live_voice_buttons.append(button(self.panel_buttons,"Mic: OFF",self.toggle_voice_session))
+        self.live_voice_buttons[-1].pack(side="left",padx=3)
         button(self.panel_buttons,"◫  Feed",self.toggle_signal_panel).pack(side="left",padx=3)
         button(self.panel_buttons,"◧  Chat",self.toggle_inspector).pack(side="left",padx=3)
         label(row,"PERSONAL AI  ·  LOCAL MEMORY",8,ACCENT).pack(side="right",padx=12)
@@ -228,18 +233,25 @@ class App(tk.Tk):
         f=self.pages["voice"]
         card=tk.Frame(f,bg=CARD); card.pack(fill="x")
         c=self.new_orb(card,220); c.pack(fill="x")
-        label(card,"Say it in your own words.",18,bold=True).pack(pady=(0,10))
-        label(card,"Record up to 12 seconds. Review the words before sending.",10,DIM,wraplength=520).pack(pady=(0,18))
-        self.record_button=button(f,"Record voice",self.record,True); self.record_button.pack(pady=20)
+        label(card,"Talk naturally. Bou will listen and reply.",18,bold=True).pack(pady=(0,10))
+        label(card,"Live conversation starts automatically when Bou opens. Pause the microphone from the Mic button at any time.",10,DIM,wraplength=720).pack(pady=(0,18))
+        self.live_voice_status=label(f,"Microphone is off.",10,DIM,anchor="w")
+        self.live_voice_status.pack(fill="x",pady=(18,6))
+        self.live_voice_buttons.append(button(f,"Start live conversation",self.toggle_voice_session,True))
+        self.live_voice_buttons[-1].pack(anchor="w",pady=(4,14))
+        tk.Frame(f,bg=LINE,height=1).pack(fill="x",pady=(4,12))
+        label(f,"OPTIONAL · ONE-TIME DICTATION",9,ACCENT,bold=True).pack(anchor="w")
+        label(f,"The live microphone above does not need a Record or Send click. One-time dictation is available only as an alternative.",9,DIM,wraplength=730).pack(anchor="w",pady=(5,4))
+        self.record_button=button(f,"Record one phrase",self.record); self.record_button.pack(anchor="w",pady=(6,10))
         label(f,"TRANSCRIPT · কথার লেখা",9,DIM,bold=True).pack(anchor="w",pady=(8,10))
         self.transcript=textinput(f,6); self.transcript.pack(fill="both",expand=True)
-        button(f,"Review in chat →",self.send_transcript).pack(anchor="e",pady=12)
-        label(f,"Recording is sent to Google's speech recognition service. Audio is not saved by Bou.",9,DIM,wraplength=540,justify="left").pack(anchor="w",pady=6)
+        button(f,"Send edited transcript →",self.send_transcript).pack(anchor="e",pady=12)
+        label(f,"Live speech is sent to the selected transcription provider; recognized text is sent to your configured AI provider. Bou does not save microphone audio.",9,DIM,wraplength=740,justify="left").pack(anchor="w",pady=6)
     def build_camera(self):
         f=self.pages["camera"]
         label(f,"CAMERA · MICROPHONE · PC CONTROL",9,ACCENT,bold=True).pack(anchor="w",pady=(2,6))
         label(f,"Your devices, only when you ask.",19,bold=True).pack(anchor="w")
-        label(f,"Camera and PC access start only after your click. Bou never keeps a live camera or microphone running.",10,DIM,wraplength=780,justify="left").pack(anchor="w",pady=(7,18))
+        label(f,"Camera access starts only after your click. The microphone follows your live-voice setting and can be paused at any time.",10,DIM,wraplength=780,justify="left").pack(anchor="w",pady=(7,18))
         camera_card=tk.Frame(f,bg=CARD,highlightthickness=1,highlightbackground=LINE,padx=18,pady=15)
         camera_card.pack(fill="x",pady=(0,12))
         label(camera_card,"ONE CAMERA FRAME",9,ACCENT,bold=True).pack(anchor="w")
@@ -249,9 +261,9 @@ class App(tk.Tk):
         self.camera_status=label(row,"Camera off",9,DIM); self.camera_status.pack(side="left",padx=12)
         voice_card=tk.Frame(f,bg=CARD,highlightthickness=1,highlightbackground=LINE,padx=18,pady=14)
         voice_card.pack(fill="x",pady=(0,12))
-        label(voice_card,"MANUAL MICROPHONE",9,ACCENT,bold=True).pack(anchor="w")
+        label(voice_card,"LIVE MICROPHONE",9,ACCENT,bold=True).pack(anchor="w")
         row=tk.Frame(voice_card,bg=CARD); row.pack(fill="x",pady=(5,0))
-        label(row,"Voice Studio records only after you press Record (up to 12 seconds); review the transcript before sending. Audio goes to Google's speech recognition service and is not saved.",10,DIM,wraplength=650,justify="left").pack(side="left",fill="x",expand=True)
+        label(row,"When enabled, Bou listens for complete phrases, transcribes them with the selected provider, sends the words to your AI, then speaks its reply. Pause the mic whenever you want.",10,DIM,wraplength=650,justify="left").pack(side="left",fill="x",expand=True)
         button(row,"Open Voice Studio →",lambda:self.show_page("voice")).pack(side="right",padx=(12,0))
         pc_card=tk.Frame(f,bg=CARD,highlightthickness=1,highlightbackground=ACCENT,padx=18,pady=15)
         pc_card.pack(fill="both",expand=True)
@@ -381,18 +393,32 @@ class App(tk.Tk):
         label(f,"OpenRouter model",10,DIM).pack(anchor="w",pady=(6,5))
         self.model_entry=entry(f); self.model_entry.insert(0,self.settings["model"]); self.model_entry.pack(fill="x",ipady=9)
         self.speech_var=tk.BooleanVar(value=self.settings["speech_out"]); self.memory_var=tk.BooleanVar(value=self.settings["use_memory"])
+        self.voice_auto_var=tk.BooleanVar(value=self.settings.get("voice_auto_start",True))
         self.history_var=tk.BooleanVar(value=self.settings.get("use_history",True))
-        for title,var in [("Speak AI replies",self.speech_var),("Use conversation memory in AI chats",self.history_var),("Use saved notes in AI requests",self.memory_var)]:
+        for title,var in [("Speak AI replies and startup greeting",self.speech_var),("Start live microphone conversation when Bou opens",self.voice_auto_var),("Use conversation memory in AI chats",self.history_var),("Use saved notes in AI requests",self.memory_var)]:
             tk.Checkbutton(f,text=title,variable=var,bg=BG,fg=TXT,selectcolor=CARD2,activebackground=BG,activeforeground=TXT,font=(FONT,10)).pack(anchor="w",pady=9)
+        label(f,"Speech-to-text provider",10,DIM).pack(anchor="w",pady=(8,5))
+        provider_name="Wispr Flow API" if self.settings.get("voice_provider","wispr")=="wispr" else "Google Speech Recognition"
+        self.voice_provider_var=tk.StringVar(value=provider_name)
+        ttk.Combobox(f,textvariable=self.voice_provider_var,values=["Wispr Flow API","Google Speech Recognition"],state="readonly").pack(fill="x",pady=(0,8))
+        label(f,"Wispr Flow API key · requires Wispr Flow API access",10,DIM).pack(anchor="w",pady=(8,5))
+        self.wispr_key_entry=entry(f); self.wispr_key_entry.configure(show="•"); self.wispr_key_entry.pack(fill="x",ipady=9)
+        wispr_key_row=tk.Frame(f,bg=BG); wispr_key_row.pack(fill="x",pady=9)
+        button(wispr_key_row,"Use this session",self.apply_wispr_key).pack(side="left")
+        button(wispr_key_row,"Save securely",self.save_wispr_api_key).pack(side="left",padx=6)
+        button(wispr_key_row,"Remove saved key",self.remove_saved_wispr_api_key).pack(side="left",padx=6)
+        label(f,"Wispr Voice Interface API access needs Wispr approval and may incur usage charges. Bou stores the key in this Windows account's Credential Manager, never in the project files.",9,DIM,wraplength=550,justify="left").pack(anchor="w",pady=(0,10))
         label(f,"The full transcript stays on this PC. When enabled, recent and relevant earlier excerpts are sent with your chat request to the configured OpenRouter model. Turn this off to keep the archive local only.",9,DIM,wraplength=550,justify="left").pack(anchor="w",pady=(0,10))
         button(f,"Save preferences",self.save_settings,True).pack(anchor="w",pady=(6,18))
         tk.Frame(f,bg=LINE,height=1).pack(fill="x",pady=5)
         label(f,"OpenRouter API key · local mode only",10,DIM).pack(anchor="w",pady=(12,6))
         self.key_entry=entry(f); self.key_entry.configure(show="•"); self.key_entry.pack(fill="x",ipady=9)
         row=tk.Frame(f,bg=BG); row.pack(fill="x",pady=10)
-        button(row,"Apply key",self.apply_key).pack(side="left")
-        button(row,"Test connection",self.test_connection).pack(side="left",padx=8)
-        label(f,"The existing engine key is used automatically. New keys entered here are kept only until you close Bou.",9,DIM,wraplength=550,justify="left").pack(anchor="w",pady=5)
+        button(row,"Use for this session",self.apply_key).pack(side="left")
+        button(row,"Save securely",self.save_api_key).pack(side="left",padx=6)
+        button(row,"Remove saved key",self.remove_saved_api_key).pack(side="left",padx=6)
+        button(row,"Test connection",self.test_connection).pack(side="right")
+        label(f,"Saved keys are kept in this Windows account's Credential Manager, never bundled into the installer. This key is used only in local mode.",9,DIM,wraplength=550,justify="left").pack(anchor="w",pady=5)
         label(f,"Capabilities: chat · translations · writing · explicit app launches · image analysis · one-shot camera · approved one-step PC control",9,DIM,wraplength=550,justify="left").pack(anchor="w",pady=10)
     def show_page(self,key):
         for f in self.pages.values(): f.pack_forget()
@@ -454,7 +480,7 @@ class App(tk.Tk):
         win.resizable(False,False)
         label(win,"AVAILABLE SKILLS",11,ACCENT,bold=True).pack(anchor="w",padx=22,pady=(20,12))
         for title,detail in [("Chat","Ask questions and continue your saved conversation."),
-            ("Voice","Record only after pressing Record; review the transcript before sending."),
+            ("Voice","Talk naturally with the live microphone. Bou transcribes and replies automatically."),
             ("Vision","Choose an image, review it, then confirm before analysis."),
             ("Agent Town","Watch the Manager and worker team status. Open Agents to edit task roles."),
             ("Desktop launch","Request an app launch explicitly; Bou records the request status.")]:
@@ -538,20 +564,21 @@ class App(tk.Tk):
     def record(self):
         if self.recording:
             self.engine.record_stop.set(); self.record_button.configure(state="disabled"); return
-        if self.busy or self.voice_busy or self.pc_busy or self.camera_capture_id: self.notify("Wait for the current task to finish.",True); return
+        if self.busy or self.voice_busy or self.voice_session_active or self.pc_busy or self.camera_capture_id: self.notify("Pause live listening before using one-time dictation.",True); return
         self.recording=True; self.engine.cancel_event.clear()
         self.record_button.configure(text="Finish recording")
         self.set_phase("Recording","Up to 12 seconds. Press Finish when done.")
-        self.notify("Microphone active. Audio goes to Google for transcription.")
+        provider_name="Wispr Flow" if self.settings.get("voice_provider","wispr")=="wispr" else "Google Speech Recognition"
+        self.notify("Microphone active. Audio goes to "+provider_name+" for transcription.")
         def work():
             try:
-                text=self.engine.record(self.settings["language"],self.events)
+                text=self.engine.record(self.settings["language"],self.events,self.settings.get("voice_provider","wispr"))
                 self.events.put(("transcript",text))
             except Exception as exc: self.events.put(("voice_error",type(exc).__name__))
         threading.Thread(target=work,daemon=True).start()
     def send_transcript(self):
         text=self.transcript.get("1.0","end").strip()
-        if text: self.fill_prompt(text)
+        if text:self.show_page("assistant"); self.submit(text)
     def choose_image(self):
         if self.busy or self.pc_busy: self.notify("Wait for the current request.",True); return
         if not Image: self.notify("Pillow is not installed.",True); return
@@ -772,6 +799,77 @@ class App(tk.Tk):
         if selected:
             for tid,name,status,detail in self.store.tasks():
                 if tid==selected[0]:self.task_detail.configure(text=detail or STATUS.get(status,status))
+    def refresh_voice_controls(self):
+        if self.voice_session_active:
+            button_text="Mic: ON · pause"; page_text="Pause live conversation"
+            status="Microphone is active. Speak naturally; Bou will transcribe and answer aloud."
+        else:
+            button_text="Mic: OFF"; page_text="Start live conversation"
+            if self.settings.get("voice_provider","wispr")=="wispr" and not self.engine.wispr_api_key:
+                status="Add an approved Wispr Flow API key in Settings to start live listening."
+            else:status="Microphone is off."
+        for control in self.live_voice_buttons:
+            try:control.configure(text=page_text if control is self.live_voice_buttons[-1] else button_text)
+            except tk.TclError:pass
+        if hasattr(self,"live_voice_status"):
+            try:self.live_voice_status.configure(text=status,fg=ACCENT if self.voice_session_active else DIM)
+            except tk.TclError:pass
+    def startup_voice(self):
+        if self.closing:return
+        self.refresh_voice_controls()
+        if not self.settings.get("speech_out",True):
+            if self.settings.get("voice_auto_start",True):self.start_voice_session()
+            return
+        self.voice_busy=True; self.voice_pause.set()
+        self.set_phase("Welcome","Bou is starting your voice session.")
+        def greet():
+            try:self.engine.speak("Welcome to Bou. কেমন আছেন?"); self.events.put(("welcome_done",None))
+            except Exception as exc:self.events.put(("welcome_error",str(exc)[:120]))
+        threading.Thread(target=greet,daemon=True).start()
+    def start_voice_session(self):
+        if self.voice_session_active:return True
+        provider=self.settings.get("voice_provider","wispr")
+        if not mk.sd or not mk.sr:
+            self.set_phase("Microphone unavailable","Install sounddevice and SpeechRecognition to use voice chat.")
+            self.notify("Microphone packages are missing. Text chat is still available.",True); return False
+        if provider=="wispr" and not self.engine.wispr_api_key:
+            self.refresh_voice_controls(); self.set_phase("Wispr Flow setup needed","Add an approved Wispr Flow API key in Settings before live transcription.")
+            self.notify("Wispr Flow API key required. Bou will not send voice audio to another transcription service.",True); return False
+        self.voice_session_stop.clear(); self.voice_pause.clear(); self.voice_session_active=True
+        self.refresh_voice_controls(); self.set_phase("Starting microphone","Connecting to the selected speech-to-text service.")
+        stop_event=self.voice_session_stop; pause_event=self.voice_pause; language=self.settings.get("language","bn-BD")
+        def listen():
+            try:self.engine.listen_continuously(stop_event,pause_event,language,provider,self.events)
+            except Exception as exc:self.events.put(("voice_session_error",str(exc)[:180]))
+        threading.Thread(target=listen,daemon=True).start()
+        return True
+    def stop_voice_session(self,notify=True):
+        self.voice_session_stop.set(); self.voice_pause.set(); self.voice_session_active=False
+        self.refresh_voice_controls(); self.set_phase("Ready","Microphone is off.")
+        if notify:self.notify("Live microphone paused.")
+    def toggle_voice_session(self):
+        if self.voice_session_active:self.stop_voice_session()
+        else:self.start_voice_session()
+    def resume_voice_after_speech(self):
+        if self.voice_session_active and not self.voice_busy and not self.busy:self.voice_pause.clear()
+    def apply_wispr_key(self):
+        key=self.wispr_key_entry.get().strip()
+        if not key:self.notify("Paste your approved Wispr Flow API key first.",True); return
+        self.engine.wispr_api_key=key; self.wispr_key_entry.delete(0,"end")
+        self.notify("Wispr Flow key is active for this session.")
+        if self.settings.get("voice_provider","wispr")=="wispr" and self.settings.get("voice_auto_start",True):self.start_voice_session()
+    def save_wispr_api_key(self):
+        key=self.wispr_key_entry.get().strip()
+        try:self.engine.save_wispr_api_key(key)
+        except Exception as exc:self.notify("Wispr Flow key could not be saved ("+str(exc)[:120]+").",True); return
+        self.wispr_key_entry.delete(0,"end"); self.notify("Wispr Flow API key saved in Windows Credential Manager.")
+        if self.settings.get("voice_provider","wispr")=="wispr" and self.settings.get("voice_auto_start",True):self.start_voice_session()
+    def remove_saved_wispr_api_key(self):
+        if not messagebox.askyesno("Remove Wispr Flow API key","Remove Bou's saved Wispr Flow key from this Windows account?"):return
+        try:self.engine.remove_saved_wispr_api_key()
+        except Exception as exc:self.notify("Wispr Flow key could not be removed ("+str(exc)[:120]+").",True); return
+        if self.voice_session_active and self.settings.get("voice_provider")=="wispr":self.stop_voice_session(notify=False)
+        self.refresh_voice_controls(); self.notify("Saved Wispr Flow API key removed.")
     def save_settings(self):
         if self.busy or self.recording or self.voice_busy:self.notify("Finish the current task before changing preferences.",True); return
         model=self.model_entry.get().strip()
@@ -780,8 +878,12 @@ class App(tk.Tk):
         if backend_mode not in ("local","service"):self.notify("Choose local or service mode.",True); return
         if backend_mode=="service" and (not service_url.startswith(("https://","http://")) or not service_token):
             self.notify("Service mode needs a valid URL and customer access token.",True); return
-        self.settings.update(mode=self.mode_var.get(),language=self.lang_var.get(),model=model,speech_out=self.speech_var.get(),use_memory=self.memory_var.get(),use_history=self.history_var.get(),backend_mode=backend_mode,service_url=service_url,service_token=service_token)
-        self.store.save_settings(self.settings); self.update_connection(); self.refresh_memory(); self.notify("Preferences saved on this PC.")
+        provider="wispr" if self.voice_provider_var.get()=="Wispr Flow API" else "google"
+        was_listening=self.voice_session_active
+        if was_listening:self.stop_voice_session(notify=False)
+        self.settings.update(mode=self.mode_var.get(),language=self.lang_var.get(),model=model,speech_out=self.speech_var.get(),voice_auto_start=self.voice_auto_var.get(),voice_provider=provider,use_memory=self.memory_var.get(),use_history=self.history_var.get(),backend_mode=backend_mode,service_url=service_url,service_token=service_token)
+        self.store.save_settings(self.settings); self.update_connection(); self.refresh_memory(); self.refresh_voice_controls(); self.notify("Preferences saved on this PC.")
+        if self.settings["voice_auto_start"] and (was_listening or not self.voice_busy):self.after(500,self.start_voice_session)
     def save_workers(self):
         if self.busy or self.recording or self.voice_busy:
             self.notify("Finish the current task before changing workers.",True); return
@@ -816,6 +918,18 @@ class App(tk.Tk):
         value=self.key_entry.get().strip()
         if not value:self.notify("Paste a key first.",True);return
         self.engine.api_key=value; self.key_entry.delete(0,"end"); self.update_connection(); self.notify("Key applied for this session. It was not written to a file.")
+    def save_api_key(self):
+        if self.busy:self.notify("Finish the current task first.",True); return
+        value=self.key_entry.get().strip()
+        if not value:self.notify("Paste a key first.",True);return
+        try:self.engine.save_api_key(value)
+        except Exception as exc:self.notify("Secure key storage failed ("+type(exc).__name__+").",True);return
+        self.key_entry.delete(0,"end"); self.update_connection(); self.notify("OpenRouter key saved in this Windows account's Credential Manager.")
+    def remove_saved_api_key(self):
+        if not messagebox.askyesno("Remove saved API key","Remove Bou's saved OpenRouter key from this Windows account? This does not affect service-mode keys."):return
+        try:self.engine.remove_saved_api_key()
+        except Exception as exc:self.notify("Saved key could not be removed ("+type(exc).__name__+").",True);return
+        self.update_connection(); self.notify("Saved OpenRouter key removed.")
     def test_connection(self):
         self.show_page("assistant"); self.submit("Reply briefly: Connection successful.")
     def poll(self):
@@ -835,11 +949,12 @@ class App(tk.Tk):
                     self.notify("Request cancelled. No late answer was added." if status=="cancelled" else ("Finished." if status in ("completed","submitted") else "Could not finish this request."),status=="failed")
                     if text:self.append_chat("assistant",text)
                     if status=="completed" and text and self.settings["speech_out"]:
-                        self.voice_busy=True; self.set_phase("Speaking","Text reply is already available.")
+                        self.voice_busy=True; self.voice_pause.set(); self.set_phase("Speaking","Text reply is already available.")
                         def speak(reply=text):
                             try:self.engine.speak(reply); self.events.put(("speech_done",None))
                             except Exception:self.events.put(("speech_error",None))
                         threading.Thread(target=speak,daemon=True).start()
+                    elif self.voice_session_active:self.after(500,self.resume_voice_after_speech)
                 elif kind=="worker_status":
                     tid,worker_id,state=data
                     if tid!=self.current_task:continue
@@ -911,24 +1026,58 @@ class App(tk.Tk):
                     self.pc_image=None; self.pc_stage="waiting"
                     self.pc_status.configure(text=result.get("text","Action finished.")+" Select Review next screen for another step.",fg=ACCENT if result.get("ok") else RED)
                     self.update_pc_controls()
+                elif kind=="welcome_done":
+                    self.voice_busy=False; self.set_phase("Ready","Welcome to Bou.")
+                    if self.settings.get("voice_auto_start",True):self.after(700,self.start_voice_session)
+                elif kind=="welcome_error":
+                    self.voice_busy=False; self.set_phase("Ready","Text and microphone controls are available.")
+                    self.notify("Bou could not play the startup greeting ("+str(data)+").",True)
+                    if self.settings.get("voice_auto_start",True):self.after(700,self.start_voice_session)
+                elif kind=="voice_session_ready":
+                    if self.voice_session_active:
+                        self.refresh_voice_controls(); self.set_phase("Listening","Speak naturally. Pause between phrases and Bou will answer aloud.")
+                        self.notify("Live microphone is on. Speak naturally; Bou will transcribe and respond.")
+                elif kind=="voice_session_stopped":
+                    if self.voice_session_active:self.voice_session_active=False; self.refresh_voice_controls()
+                elif kind=="voice_session_error":
+                    self.voice_session_active=False; self.voice_session_stop.set(); self.voice_pause.set(); self.refresh_voice_controls()
+                    self.set_phase("Microphone unavailable",str(data)[:140]); self.notify("Live microphone could not start: "+str(data)[:140],True)
+                elif kind=="voice_auto_status":
+                    if self.voice_session_active:self.set_phase("Transcribing",str(data))
+                elif kind=="voice_auto_transcript":
+                    if not self.voice_session_active:continue
+                    self.voice_pause.set()
+                    if not data:self.after(350,self.resume_voice_after_speech); continue
+                    self.transcript.delete("1.0","end"); self.transcript.insert("1.0",data)
+                    self.show_page("assistant")
+                    if not self.submit(data):self.after(700,self.resume_voice_after_speech)
+                elif kind=="voice_auto_empty":
+                    if self.voice_session_active:self.after(400,self.resume_voice_after_speech)
+                elif kind=="voice_auto_error":
+                    if not self.voice_session_active:continue
+                    detail=str(data)[:180]; self.notify("Voice transcription failed: "+detail,True)
+                    if any(word in detail.lower() for word in ("rejected the api key","access is not enabled","usage limit","api key is missing")):
+                        self.stop_voice_session(notify=False); self.set_phase("Wispr Flow setup needed",detail)
+                    else:self.after(1800,self.resume_voice_after_speech)
                 elif kind in ("transcript","voice_error"):
-                    self.recording=False; self.record_button.configure(text="Record voice",state="normal")
+                    self.recording=False; self.record_button.configure(text="Record one phrase",state="normal")
                     cancelled=self.engine.cancel_event.is_set()
                     self.set_phase("Ready" if kind=="transcript" or cancelled else "Failed")
                     if kind=="transcript" and data and not cancelled:
-                        self.transcript.delete("1.0","end"); self.transcript.insert("1.0",data); self.notify("Review the transcript, then move it to Chat.")
+                        self.transcript.delete("1.0","end"); self.transcript.insert("1.0",data); self.show_page("assistant"); self.submit(data)
                     elif kind=="voice_error" and not cancelled:self.notify("Voice recognition failed ("+data+"). Text chat still works.",True)
                     else:self.notify("Recording cancelled.")
                 elif kind in ("speech_done","speech_error"):
                     self.voice_busy=False; self.set_phase("Ready")
                     if kind=="speech_error":self.notify("Voice service unavailable. Your text reply is available.",True)
+                    if self.voice_session_active:self.voice_pause.set(); self.after(800,self.resume_voice_after_speech)
         except queue.Empty:pass
         self.after(80,self.poll)
     def fetch_headlines(self):
         def worker():
             items=[]
             try:
-                request=Request("https://feeds.bbci.co.uk/news/world/rss.xml",headers={"User-Agent":"BouAssistant/1.6.0 (public RSS headlines)"})
+                request=Request("https://feeds.bbci.co.uk/news/world/rss.xml",headers={"User-Agent":"BouAssistant/1.7.0 (public RSS headlines)"})
                 with urlopen(request,timeout=8) as response:raw=response.read(1_500_000)
                 root=ET.fromstring(raw)
                 for item in root.findall("./channel/item")[:5]:
@@ -1063,7 +1212,7 @@ class App(tk.Tk):
         else:self.device_label.configure(text="Device statistics unavailable")
         self.after(2500,self.stats)
     def on_close(self):
-        self.closing=True; self.engine.cancel()
+        self.closing=True; self.voice_session_stop.set(); self.voice_pause.set(); self.engine.cancel()
         if self.current_task:self.store.task(self.current_task,self.task_label,"needs_review","Closed while a request was active; it will not be retried automatically.")
         self.store.close(); self.destroy()
 

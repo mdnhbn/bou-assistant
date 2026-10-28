@@ -22,5 +22,11 @@ if errorlevel 1 (
     echo Camera support could not be installed. Chat and the other Bou pages can still run.
   )
 )
+".venv\Scripts\python.exe" -c "import keyring" >nul 2>&1
+if errorlevel 1 (
+  echo Installing secure Windows API-key storage...
+  ".venv\Scripts\python.exe" -m pip install keyring
+  if errorlevel 1 echo Secure key storage is unavailable; keys can still be used for this session.
+)
 ".venv\Scripts\python.exe" -B makima_studio.py
 if errorlevel 1 pause
