@@ -1,4 +1,4 @@
-# Bou AI Assistant 1.4.0
+# Bou AI Assistant 1.5.0
 
 Bou হলো Windows desktop AI assistant, সঙ্গে conversation memory, Manager ও Worker দল, এবং বিক্রির জন্য ব্যবহারকারীভিত্তিক hosted service। Assistant-এর source, service, admin panel ও changelog এই repository-তে রাখা হয়।
 
@@ -48,11 +48,24 @@ Hosted service chat transcript নিজে থেকে সংরক্ষণ �
 
 Voice, image analysis, activity log এবং Settings-এর আরও বিবরণ app-এর মধ্যে আছে।
 
+## Desktop dashboard
+
+1.5.0-তে public Stonic product-এ দেখা layout থেকে অনুপ্রাণিত হয়ে তিন-কলামের Bou dashboard করা হয়েছে: বামে signal feed, মাঝখানে animated character core ও Agent Town, ডানে Voice/Agent/Notes chat inspector। Today অংশে BBC World-এর public RSS headline দেখায়; শিরোনামে click করলে BBC page খোলে। Search browser-এর result page খোলে—AI নিজে unrestricted web browsing করে না। 2D/3D বোতামটি Bou-র local activity illustration বদলায়, real map নয়; GPS বা camera ব্যবহার হয় না। Gesture বোতাম character-এর idle animation চালু/বন্ধ করে, camera gesture শনাক্ত করে না। Feed ও chat panel লুকানো/দেখানোর control-ও আছে।
+
+Stonic-এর release notes-এ থাকা phone call, সবসময় ভাসমান character/live wallpaper, screen awareness, নিজের persona বানানো, reminder, PDF/document attachment, পুরো visual page তৈরি, এবং AI উত্তরের ভেতরে web research—Bou 1.5.0-তে নেই। Paid activation-এর ভেতরের Stonic UI পরীক্ষা করা যায়নি; পরিবর্তনগুলো public site, changelog, onboarding screen ও Facebook ভিডিওতে দেখা অংশ থেকে নেওয়া।
+
 ## Source ও সংস্করণ
 
 মূল desktop assistant এবং নতুন Bou interface-এর source, service code, Docker configuration, admin UI ও প্রয়োজনীয় image এই repository-তে রাখা হয়। Secret key, `.env`, Python virtual environment, local database ও generated install flags `.gitignore` দিয়ে বাদ দেওয়া হয়। প্রতিটি release-এ সংস্করণ বাড়িয়ে এই README-এর Changelog-এ কী বদলেছে তা লিখুন।
 
 ## Changelog
+
+### 1.5.0 — Stonic-অনুপ্রাণিত desktop dashboard
+
+- Assistant screen-কে signal feed, animated character core, Agent Town এবং Voice/Agent/Notes chat inspector-সহ সাজানো হয়েছে।
+- BBC World public RSS headline, browser-এ explicit search, task alert এবং local activity view-এর 2D/3D illustration যোগ হয়েছে।
+- Feed/chat panel hide-show control, Agent Town-এ live Manager/worker status, এবং character animation toggle যোগ হয়েছে।
+- Bou-র নিজস্ব branding/artwork রাখা হয়েছে। Activity map location নেয় না; Gesture camera ব্যবহার করে না।
 
 ### 1.4.0 — Hosted service ও admin panel
 

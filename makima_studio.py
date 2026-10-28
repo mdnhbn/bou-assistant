@@ -2,7 +2,8 @@
 """Bou (বউ): an original desktop interface for the user's existing Makima engine.
 The original engine attribution remains Md Mehrab Hasan. UI extension: 2026.
 """
-import os,sys,json,math,time,uuid,queue,threading,logging
+import os,sys,json,math,time,uuid,queue,threading,logging,webbrowser,xml.etree.ElementTree as ET
+from urllib.request import Request,urlopen
 from pathlib import Path
 import tkinter as tk
 from tkinter import ttk,messagebox,filedialog
@@ -17,8 +18,8 @@ try:
 except ImportError:
     psutil=None
 
-BG="#0a101c"; NAV="#0c1422"; CARD="#121e30"; CARD2="#17263c"; LINE="#243650"
-TXT="#edf4ff"; DIM="#9bacc5"; ACCENT="#73e0d1"; BLUE="#8badff"; RED="#ff8f9f"
+BG="#090d16"; NAV="#0b111c"; CARD="#111a27"; CARD2="#192333"; LINE="#283342"
+TXT="#f2f4f8"; DIM="#9aa5b5"; ACCENT="#ed6a63"; BLUE="#86a9e8"; RED="#ff8f9f"
 FONT="Segoe UI"; BNFONT="Nirmala UI"
 PAGES=[("assistant","Assistant"),("workers","Workers"),("voice","Voice studio"),("memory","Memory"),("activity","Activity"),("settings","Settings")]
 STATUS={"completed":"Completed","failed":"Failed","running":"Running","submitted":"Sent to Windows","cancelled":"Cancelled","stopping":"Stopping","needs_review":"Needs review"}
@@ -27,7 +28,7 @@ def label(parent,text,size=11,color=TXT,bg=None,bold=False,**kwargs):
     return tk.Label(parent,text=text,font=(FONT,size,"bold" if bold else "normal"),fg=color,bg=bg or parent.cget("bg"),**kwargs)
 def button(parent,text,command,primary=False,**kwargs):
     return tk.Button(parent,text=text,command=command,relief="flat",bd=0,padx=15,pady=10,cursor="hand2",
-        bg=ACCENT if primary else CARD2,fg=BG if primary else TXT,activebackground="#94f0e3" if primary else LINE,
+        bg=ACCENT if primary else CARD2,fg=BG if primary else TXT,activebackground="#ff8d83" if primary else LINE,
         activeforeground=BG if primary else TXT,font=(FONT,10,"bold"),**kwargs)
 def textinput(parent,height=3):
     return tk.Text(parent,height=height,bg=CARD2,fg=TXT,insertbackground=ACCENT,relief="flat",bd=0,
@@ -37,7 +38,7 @@ def entry(parent):
 class App(tk.Tk):
     def __init__(self,store=None,engine=None):
         super().__init__()
-        self.title("বউ — AI Assistant 1.4.0")
+        self.title("বউ — AI Assistant 1.5.0")
         self.geometry("1600x920+40+40")
         self.minsize(1180,760)
         try:self.state("zoomed")
@@ -50,6 +51,8 @@ class App(tk.Tk):
         self.events=queue.Queue()
         self.busy=False; self.recording=False; self.voice_busy=False; self.closing=False
         self.current_task=None; self.phase=0; self.orbs=[]; self.page="assistant"; self.selected_note=None
+        self.signal_view="today"; self.map_mode="3D"; self.gesture_enabled=True; self.headlines=[]; self.headlines_ready=False
+        self.signal_panel_visible=True; self.inspector_visible=True
         self.task_label=""; self.preview_photo=None
         self.setup_style()
         self.build_sidebar()
@@ -64,7 +67,7 @@ class App(tk.Tk):
         self.show_page("assistant")
         for role,text in self.store.messages(): self.append_chat(role,text,save=False)
         self.refresh_memory(); self.refresh_activity(); self.update_connection()
-        self.after(80,self.poll); self.after(60,self.animate); self.after(1000,self.stats)
+        self.after(80,self.poll); self.after(60,self.animate); self.after(1000,self.stats); self.after(700,self.fetch_headlines)
         self.protocol("WM_DELETE_WINDOW",self.on_close)
         self.bind("<Escape>",lambda event:self.stop())
     def setup_style(self):
@@ -98,12 +101,13 @@ class App(tk.Tk):
         self.phase_label=label(top,"READY",9,ACCENT,bold=True); self.phase_label.pack(side="right")
         self.state_detail=label(side,"Your private assistant is ready.",9,DIM,anchor="w")
         self.state_detail.pack(fill="x",padx=18,pady=(0,12))
-        tabs=tk.Frame(side,bg=NAV); tabs.pack(fill="x",padx=12,pady=(0,10))
-        for title,key in [("VOICE","voice"),("AGENT","assistant"),("TEAM","workers"),("NOTES","memory")]:
+        tabs=tk.Frame(side,bg=NAV); tabs.pack(fill="x",padx=12,pady=(0,10)); self.inspector_tabs={}
+        for title,key in [("VOICE","voice"),("AGENT","assistant"),("NOTES","memory")]:
             b=tk.Button(tabs,text=title,command=lambda k=key:self.show_page(k),relief="flat",bd=0,
                 bg=CARD2 if key=="assistant" else NAV,fg=ACCENT if key=="assistant" else DIM,
-                activebackground=CARD2,activeforeground=ACCENT,font=(FONT,8,"bold"),padx=15,pady=9)
+                activebackground=CARD2,activeforeground=ACCENT,font=(FONT,8,"bold"),padx=23,pady=9)
             b.pack(side="left",expand=True,fill="x",padx=2)
+            self.inspector_tabs[key]=b
         chat_frame=tk.Frame(side,bg=NAV); chat_frame.pack(fill="both",expand=True,padx=2)
         self.chat=tk.Text(chat_frame,bg=NAV,fg=TXT,relief="flat",bd=0,font=(BNFONT,11),wrap="word",
             padx=18,pady=16,state="disabled",spacing3=8)
@@ -131,9 +135,12 @@ class App(tk.Tk):
             w=label(box,initial,8,TXT,wraplength=108,justify="left"); w.pack(anchor="w",pady=(4,0)); setattr(self,attr,w)
     def build_header(self):
         row=tk.Frame(self.host,bg=BG); row.pack(fill="x",pady=(0,8))
-        self.page_title=label(row,"BOU  /  YOUR ASSISTANT",14,bold=True)
+        self.page_title=label(row,"BOU  /  DESKTOP COMPANION",13,bold=True)
         self.page_title.pack(side="left")
-        label(row,"PERSONAL AI  ·  PRIVATE SESSION",8,ACCENT).pack(side="right")
+        self.panel_buttons=tk.Frame(row,bg=BG); self.panel_buttons.pack(side="right")
+        button(self.panel_buttons,"◫  Feed",self.toggle_signal_panel).pack(side="left",padx=3)
+        button(self.panel_buttons,"◧  Chat",self.toggle_inspector).pack(side="left",padx=3)
+        label(row,"PERSONAL AI  ·  LOCAL MEMORY",8,ACCENT).pack(side="right",padx=12)
         self.banner=label(self.host,"Ready when you are. আপনার নির্দেশ লিখুন।",9,DIM,anchor="w",wraplength=900,justify="left")
         self.banner.pack(fill="x",pady=(0,10))
     def new_orb(self,parent,height):
@@ -143,56 +150,72 @@ class App(tk.Tk):
     def build_assistant(self):
         f=self.pages["assistant"]
         layout=tk.Frame(f,bg=BG); layout.pack(fill="both",expand=True)
-        left=tk.Frame(layout,bg=NAV,width=245,highlightthickness=1,highlightbackground=LINE)
-        left.pack(side="left",fill="y",padx=(0,12)); left.pack_propagate(False)
-        label(left,"SESSION  /  SIGNAL",9,ACCENT,bold=True).pack(anchor="w",padx=15,pady=(15,4))
-        label(left,"Local activity monitor",9,DIM).pack(anchor="w",padx=15)
-        self.globe_canvas=tk.Canvas(left,bg=NAV,height=205,highlightthickness=0)
-        self.globe_canvas.pack(fill="x",padx=8,pady=(3,4))
-        tk.Frame(left,bg=LINE,height=1).pack(fill="x",padx=14,pady=6)
-        label(left,"RECENT ACTIVITY",8,DIM,bold=True).pack(anchor="w",padx=15,pady=(5,7))
-        self.recent_feed=tk.Frame(left,bg=NAV); self.recent_feed.pack(fill="x",padx=13)
-        tk.Frame(left,bg=LINE,height=1).pack(fill="x",padx=14,pady=9)
-        label(left,"MEMORY CORE",8,DIM,bold=True).pack(anchor="w",padx=15,pady=(1,4))
-        self.dashboard_memory=label(left,"Loading local archive…",9,TXT,wraplength=205,justify="left")
-        self.dashboard_memory.pack(anchor="w",padx=15,pady=(2,9))
-        button(left,"Open memory  ↗",lambda:self.show_page("memory")).pack(fill="x",padx=12,pady=(2,12))
+        self.signal_panel=tk.Frame(layout,bg=NAV,width=252,highlightthickness=1,highlightbackground=LINE)
+        self.signal_panel.pack(side="left",fill="y",padx=(0,12)); self.signal_panel.pack_propagate(False)
+        label(self.signal_panel,"MEDIA LINK",8,ACCENT,bold=True).pack(anchor="w",padx=14,pady=(13,3))
+        label(self.signal_panel,"SAT-LINK FEED  ·  LOCAL",9,TXT,bold=True).pack(anchor="w",padx=14)
+        map_row=tk.Frame(self.signal_panel,bg=NAV); map_row.pack(fill="x",padx=14,pady=(6,0))
+        label(map_row,"Personal activity map · no location tracking",7,DIM).pack(side="left")
+        self.map_mode_button=button(map_row,"3D",self.toggle_map_mode); self.map_mode_button.pack(side="right")
+        self.globe_canvas=tk.Canvas(self.signal_panel,bg=NAV,height=176,highlightthickness=0)
+        self.globe_canvas.pack(fill="x",padx=8,pady=(0,2))
+        signal_nav=tk.Frame(self.signal_panel,bg=NAV); signal_nav.pack(fill="x",padx=9,pady=(0,7))
+        self.signal_nav={}
+        for title,key in [("Today","today"),("Map","map"),("Search","search"),("Alerts","alerts"),("More","more")]:
+            b=tk.Button(signal_nav,text=title,command=lambda k=key:self.set_signal_view(k),relief="flat",bd=0,
+                bg=CARD2 if key=="today" else NAV,fg=ACCENT if key=="today" else DIM,
+                activebackground=CARD2,activeforeground=ACCENT,font=(FONT,7,"bold"),padx=4,pady=7)
+            b.pack(side="left",expand=True,fill="x",padx=1); self.signal_nav[key]=b
+        tk.Frame(self.signal_panel,bg=LINE,height=1).pack(fill="x",padx=14,pady=5)
+        self.signal_title=label(self.signal_panel,"TODAY HEADLINES",8,DIM,bold=True)
+        self.signal_title.pack(anchor="w",padx=14,pady=(3,5))
+        label(self.signal_panel,"BBC NEWS · PUBLIC RSS",7,DIM).pack(anchor="w",padx=14,pady=(0,4))
+        self.headline_feed=tk.Frame(self.signal_panel,bg=NAV); self.headline_feed.pack(fill="x",padx=13)
+        self.activity_title=label(self.signal_panel,"RECENT ACTIVITY",7,DIM,bold=True); self.activity_title.pack(anchor="w",padx=14,pady=(7,2))
+        self.recent_feed=tk.Frame(self.signal_panel,bg=NAV); self.recent_feed.pack(fill="x",padx=13)
+        self.dashboard_memory=label(self.signal_panel,"Loading local archive…",8,TXT,wraplength=220,justify="left")
+        self.dashboard_memory.pack(side="bottom",anchor="w",padx=14,pady=(0,8))
+        label(self.signal_panel,"MEMORY CORE",7,DIM,bold=True).pack(side="bottom",anchor="w",padx=14,pady=(3,3))
+        button(self.signal_panel,"Open memory  ↗",lambda:self.show_page("memory")).pack(side="bottom",fill="x",padx=11,pady=(3,10))
 
-        main=tk.Frame(layout,bg=BG); main.pack(side="left",fill="both",expand=True)
-        controls=tk.Frame(main,bg=BG,width=158); controls.pack(side="left",fill="y",padx=(0,10)); controls.pack_propagate(False)
-        label(controls,"COMPANION",8,DIM,bold=True).pack(anchor="w",pady=(4,9))
-        modules=[("◈","Memory","Archive & notes",lambda:self.show_page("memory")),
-                 ("⚒","Workers","Parallel work team",lambda:self.show_page("workers")),
-                 ("✧","Skills","Chat · Voice · Vision",self.show_skills),
-                 ("◎","Character","Mode & language",lambda:self.show_page("settings")),
-                 ("⚙","Settings","Preferences",lambda:self.show_page("settings"))]
-        for icon,title,detail,command in modules:
-            card=tk.Frame(controls,bg=CARD,highlightthickness=1,highlightbackground=LINE)
-            card.pack(fill="x",pady=4)
-            b=tk.Button(card,text=icon+"  "+title,command=command,relief="flat",bd=0,
-                bg=CARD,fg=TXT,activebackground=CARD2,activeforeground=ACCENT,
-                font=(FONT,9,"bold"),anchor="w",padx=9,pady=8)
-            b.pack(fill="x")
-            label(card,detail,7,DIM).pack(anchor="w",padx=10,pady=(0,8))
-        status=tk.Frame(controls,bg=CARD,padx=10,pady=10); status.pack(side="bottom",fill="x",pady=5)
-        label(status,"VOICE LINK",7,DIM,bold=True).pack(anchor="w")
-        label(status,"Manual activation only",8,ACCENT,wraplength=130).pack(anchor="w",pady=(4,0))
-        self.workers_dashboard=label(status,"Manager + 3 workers · Auto",8,TXT,wraplength=130)
-        self.workers_dashboard.pack(anchor="w",pady=(8,0))
-
-        stage=tk.Frame(main,bg=CARD,highlightthickness=1,highlightbackground=LINE)
-        stage.pack(side="left",fill="both",expand=True)
-        stage_head=tk.Frame(stage,bg=CARD); stage_head.pack(fill="x",padx=17,pady=(12,1))
+        self.assistant_main=tk.Frame(layout,bg=BG); self.assistant_main.pack(side="left",fill="both",expand=True)
+        stage=tk.Frame(self.assistant_main,bg=CARD,highlightthickness=1,highlightbackground=LINE)
+        stage.pack(fill="both",expand=True)
+        stage_head=tk.Frame(stage,bg=CARD); stage_head.pack(fill="x",padx=17,pady=(10,2))
         label(stage_head,"BOU  /  CHARACTER CORE",9,ACCENT,bold=True).pack(side="left")
         self.core_status=label(stage_head,"●  STANDBY",8,DIM); self.core_status.pack(side="right")
-        self.avatar_canvas=tk.Canvas(stage,bg=CARD,highlightthickness=0,height=380)
-        self.avatar_canvas.pack(fill="both",expand=True,padx=4)
-        tk.Frame(stage,bg=LINE,height=1).pack(fill="x",padx=15,pady=(0,1))
-        hub=tk.Frame(stage,bg=CARD); hub.pack(fill="x",padx=14,pady=(8,12))
-        row=tk.Frame(hub,bg=CARD); row.pack(fill="x")
-        label(row,"VISUAL HUB",8,DIM,bold=True).pack(side="left")
-        label(row,"Quick actions",8,DIM).pack(side="right")
-        actions=tk.Frame(hub,bg=CARD); actions.pack(fill="x",pady=(6,0))
+        circuits=tk.Frame(stage,bg=CARD); circuits.pack(fill="x",padx=12,pady=(4,2))
+        modules=[("◈","MEMORY","Archive & notes",lambda:self.show_page("memory")),
+                 ("✧","SKILLS","Chat · Voice · Vision",self.show_skills),
+                 ("◖","VOICES","Speech controls",lambda:self.show_page("voice")),
+                 ("⚙","SETTING","Preferences",lambda:self.show_page("settings"))]
+        for icon,title,detail,command in modules:
+            box=tk.Frame(circuits,bg=CARD2,highlightthickness=1,highlightbackground=LINE)
+            box.pack(side="left",fill="x",expand=True,padx=3)
+            btn=tk.Button(box,text=icon+"  "+title,command=command,relief="flat",bd=0,
+                bg=CARD2,fg=TXT,activebackground=LINE,activeforeground=ACCENT,
+                font=(FONT,8,"bold"),anchor="w",padx=8,pady=7)
+            btn.pack(fill="x")
+            label(box,detail,7,DIM).pack(anchor="w",padx=9,pady=(0,6))
+        self.avatar_canvas=tk.Canvas(stage,bg=CARD,highlightthickness=0,height=285)
+        self.avatar_canvas.pack(fill="both",expand=True,padx=4,pady=(0,1))
+        town=tk.Frame(stage,bg=NAV,highlightthickness=1,highlightbackground=LINE)
+        town.pack(fill="x",padx=12,pady=(4,3))
+        town_head=tk.Frame(town,bg=NAV); town_head.pack(fill="x",padx=10,pady=(5,1))
+        label(town_head,"AGENT TOWN",8,ACCENT,bold=True).pack(side="left")
+        self.workers_dashboard=label(town_head,"Manager + 3 workers · Auto",7,DIM); self.workers_dashboard.pack(side="left",padx=10)
+        town_actions=tk.Frame(town_head,bg=NAV); town_actions.pack(side="right")
+        for title,key,cmd in [("Agents","agents",lambda:self.show_page("workers")),
+                              ("Visual hub","visual",lambda:self.fill_prompt("আমার জন্য একটি ছোট visual idea তৈরি করো")),
+                              ("Gesture","gesture",self.toggle_gesture)]:
+            button(town_actions,title,cmd).pack(side="left",padx=2)
+        self.town_canvas=tk.Canvas(town,bg=NAV,height=66,highlightthickness=0)
+        self.town_canvas.pack(fill="x",padx=7,pady=(0,5))
+        hub=tk.Frame(stage,bg=CARD); hub.pack(fill="x",padx=14,pady=(4,9))
+        hub_head=tk.Frame(hub,bg=CARD); hub_head.pack(fill="x")
+        label(hub_head,"VISUAL HUB",8,DIM,bold=True).pack(side="left")
+        label(hub_head,"Quick actions · choose a task",7,DIM).pack(side="right")
+        actions=tk.Frame(hub,bg=CARD); actions.pack(fill="x",pady=(4,0))
         for title,prompt in [("Explain","সহজ ভাষায় AI কী বুঝিয়ে বলো"),("Write","একটি সংক্ষিপ্ত ধন্যবাদ বার্তা লিখে দাও"),("Translate","Translate this to English: শুভ সকাল")]:
             button(actions,title,lambda p=prompt:self.fill_prompt(p)).pack(side="left",padx=(0,5))
         button(actions,"Image…",self.choose_image).pack(side="right",padx=(4,0))
@@ -337,15 +360,56 @@ class App(tk.Tk):
         self.pages[key].pack(fill="both",expand=True)
         self.page=key
         if key=="assistant":
-            self.inspector.pack(side="right",fill="y")
+            if self.inspector_visible:self.inspector.pack(side="right",fill="y")
+            else:self.inspector.pack_forget()
+            if self.signal_panel_visible:self.signal_panel.pack(side="left",before=self.assistant_main,fill="y",padx=(0,12))
+            else:self.signal_panel.pack_forget()
         else:
             self.inspector.pack_forget()
-        titles={"assistant":"BOU  /  YOUR ASSISTANT","workers":"BOU  /  WORKER TEAM","voice":"BOU  /  VOICE STUDIO","memory":"BOU  /  PERSONAL MEMORY","activity":"BOU  /  YOUR ACTIVITY","settings":"BOU  /  PREFERENCES"}
+        titles={"assistant":"BOU  /  DESKTOP COMPANION","workers":"BOU  /  AGENT TOWN","voice":"BOU  /  VOICE STUDIO","memory":"BOU  /  PERSONAL MEMORY","activity":"BOU  /  YOUR ACTIVITY","settings":"BOU  /  PREFERENCES"}
         self.page_title.configure(text=titles[key])
         for k,b in self.nav.items():
             b.configure(bg=CARD2 if k==key else NAV,fg=ACCENT if k==key else DIM)
+        for k,b in getattr(self,"inspector_tabs",{}).items():
+            selected=(key==k or (key=="assistant" and k=="assistant"))
+            b.configure(bg=CARD2 if selected else NAV,fg=ACCENT if selected else DIM)
         if hasattr(self,"core_status"):
             self.core_status.configure(text="●  ACTIVE" if key=="assistant" else "●  STANDBY",fg=ACCENT if key=="assistant" else DIM)
+    def toggle_signal_panel(self):
+        self.signal_panel_visible=not self.signal_panel_visible
+        if self.page!="assistant":self.show_page("assistant")
+        elif self.signal_panel_visible:self.signal_panel.pack(side="left",before=self.assistant_main,fill="y",padx=(0,12))
+        else:self.signal_panel.pack_forget()
+    def toggle_inspector(self):
+        self.inspector_visible=not self.inspector_visible
+        if self.page!="assistant":self.show_page("assistant")
+        elif self.inspector_visible:self.inspector.pack(side="right",fill="y")
+        else:self.inspector.pack_forget()
+    def set_signal_view(self,key):
+        if key=="search":
+            self.signal_view="search"; self.signal_title.configure(text="WEB SEARCH · BROWSER")
+            self.refresh_activity(); self.show_page("assistant")
+            draft=self.prompt.get("1.0","end").strip()
+            query=draft if draft.casefold().startswith("search ") else "search "+draft
+            self.prompt.delete("1.0","end"); self.prompt.insert("1.0",query); self.prompt.focus_set()
+        elif key=="more":
+            self.show_page("settings"); return
+        else:
+            self.signal_view=key
+            names={"today":"TODAY HEADLINES","map":"MAP · LOCAL ACTIVITY ONLY","alerts":"ALERTS · TASK STATUS"}
+            self.signal_title.configure(text=names.get(key,"TODAY · PERSONAL SIGNALS"))
+            for name,button_widget in self.signal_nav.items():
+                button_widget.configure(bg=CARD2 if name==key else NAV,fg=ACCENT if name==key else DIM)
+            self.refresh_activity()
+        for name,button_widget in self.signal_nav.items():
+            button_widget.configure(bg=CARD2 if name==key else NAV,fg=ACCENT if name==key else DIM)
+    def toggle_map_mode(self):
+        self.map_mode="2D" if self.map_mode=="3D" else "3D"
+        self.map_mode_button.configure(text=self.map_mode)
+        self.draw_globe()
+    def toggle_gesture(self):
+        self.gesture_enabled=not self.gesture_enabled
+        self.notify("Character gesture animation "+("enabled." if self.gesture_enabled else "paused."))
     def show_skills(self):
         win=tk.Toplevel(self); win.title("Bou skills"); win.configure(bg=BG); win.transient(self)
         win.resizable(False,False)
@@ -353,6 +417,7 @@ class App(tk.Tk):
         for title,detail in [("Chat","Ask questions and continue your saved conversation."),
             ("Voice","Record only after pressing Record; review the transcript before sending."),
             ("Vision","Choose an image, review it, then confirm before analysis."),
+            ("Agent Town","Watch the Manager and worker team status. Open Agents to edit task roles."),
             ("Desktop launch","Request an app launch explicitly; Bou records the request status.")]:
             card=tk.Frame(win,bg=CARD,padx=12,pady=10); card.pack(fill="x",padx=18,pady=4)
             label(card,title,10,TXT,bold=True).pack(anchor="w")
@@ -488,16 +553,40 @@ class App(tk.Tk):
         for tid,name,status,_ in tasks: self.task_list.insert("","end",iid=tid,values=(name,STATUS.get(status,status)))
         if hasattr(self,"recent_feed"):
             for child in self.recent_feed.winfo_children(): child.destroy()
-            if not tasks:
-                label(self.recent_feed,"No requests yet. Your activity will appear here.",8,DIM,wraplength=205,justify="left").pack(anchor="w",pady=5)
-            for _,name,status,_detail in tasks[:3]:
+            visible=tasks
+            if self.signal_view=="today":
+                if not self.headline_feed.winfo_manager():self.headline_feed.pack(fill="x",before=self.activity_title,padx=13)
+                for child in self.headline_feed.winfo_children():child.destroy()
+                if self.headlines:
+                    for title,url in self.headlines[:4]:
+                        link=tk.Button(self.headline_feed,text="•  "+title,command=lambda u=url:webbrowser.open(u),
+                            relief="flat",bd=0,bg=NAV,fg=TXT,activebackground=NAV,activeforeground=ACCENT,
+                            font=(FONT,8),anchor="w",justify="left",wraplength=218,cursor="hand2")
+                        link.pack(fill="x",anchor="w",pady=2)
+                else:
+                    message="Headlines unavailable. Check your internet connection." if self.headlines_ready else "Loading headlines…"
+                    label(self.headline_feed,message,8,DIM,wraplength=218,justify="left").pack(anchor="w",pady=4)
+                visible=tasks[:2]
+            else:
+                if self.headline_feed.winfo_manager():self.headline_feed.pack_forget()
+            if self.signal_view=="alerts":visible=[item for item in tasks if item[2] in ("failed","needs_review","stopping")]
+            elif self.signal_view=="search":
+                label(self.recent_feed,"Type a search topic in the chat box and send it. Bou opens the results in your browser.",8,DIM,wraplength=218,justify="left").pack(anchor="w",pady=5)
+                visible=[]
+            if self.signal_view=="map":
+                label(self.recent_feed,"This map shows Bou's local task history only. It does not use GPS or track device location.",8,DIM,wraplength=218,justify="left").pack(anchor="w",pady=(3,8))
+            if not visible and self.signal_view not in ("today","search"):
+                empty="No alerts. Recent task issues will appear here." if self.signal_view=="alerts" else "No requests yet. Your local activity will appear here."
+                label(self.recent_feed,empty,8,DIM,wraplength=218,justify="left").pack(anchor="w",pady=5)
+            for _,name,status,_detail in (visible[:2] if self.signal_view=="today" else visible[:4]):
                 row=tk.Frame(self.recent_feed,bg=NAV); row.pack(fill="x",pady=4)
                 led=ACCENT if status in ("completed","submitted") else RED if status=="failed" else BLUE
                 dot=tk.Canvas(row,width=9,height=9,bg=NAV,highlightthickness=0); dot.pack(side="left",anchor="n",pady=4)
                 dot.create_oval(1,1,8,8,fill=led,outline="")
                 copy=tk.Frame(row,bg=NAV); copy.pack(side="left",fill="x",expand=True,padx=(6,0))
-                label(copy,name[:66],8,TXT,wraplength=192,justify="left").pack(anchor="w")
+                label(copy,name[:66],8,TXT,wraplength=210,justify="left").pack(anchor="w")
                 label(copy,STATUS.get(status,status).upper(),7,DIM).pack(anchor="w",pady=(2,0))
+        if hasattr(self,"town_canvas") and self.town_canvas.winfo_exists():self.draw_town()
     def show_task_detail(self,event=None):
         selected=self.task_list.selection()
         if selected:
@@ -592,6 +681,9 @@ class App(tk.Tk):
                             self.state_detail.configure(text=f"{worker_name} is working in the parallel team.")
                 elif kind=="phase":
                     if not self.engine.cancel_event.is_set():self.set_phase(data)
+                elif kind=="headlines":
+                    self.headlines=data; self.headlines_ready=True
+                    if self.signal_view=="today":self.refresh_activity()
                 elif kind in ("transcript","voice_error"):
                     self.recording=False; self.record_button.configure(text="Record voice",state="normal")
                     cancelled=self.engine.cancel_event.is_set()
@@ -605,6 +697,20 @@ class App(tk.Tk):
                     if kind=="speech_error":self.notify("Voice service unavailable. Your text reply is available.",True)
         except queue.Empty:pass
         self.after(80,self.poll)
+    def fetch_headlines(self):
+        def worker():
+            items=[]
+            try:
+                request=Request("https://feeds.bbci.co.uk/news/world/rss.xml",headers={"User-Agent":"BouAssistant/1.5.0 (public RSS headlines)"})
+                with urlopen(request,timeout=8) as response:raw=response.read(1_500_000)
+                root=ET.fromstring(raw)
+                for item in root.findall("./channel/item")[:5]:
+                    title=(item.findtext("title") or "").strip()[:180]
+                    link=(item.findtext("link") or "").strip()
+                    if title and link.startswith(("https://www.bbc.co.uk/","https://www.bbc.com/")):items.append((title,link))
+            except Exception:items=[]
+            self.events.put(("headlines",items))
+        threading.Thread(target=worker,name="bou-headlines",daemon=True).start()
     def animate(self):
         if self.closing:return
         self.phase+=0.045
@@ -615,17 +721,29 @@ class App(tk.Tk):
             r=min(w,h)*.27; c.delete("all")
             for n in range(5,0,-1):
                 radius=r+n*5+math.sin(self.phase+n*.35)*(3 if active else 1.2)
-                c.create_oval(cx-radius,cy-radius,cx+radius,cy+radius,outline=["#173646","#1c4b57","#246473","#388b96","#73e0d1"][5-n],width=2)
-            c.create_oval(cx-r,cy-r,cx+r,cy+r,fill="#153a49",outline="#85edde",width=1)
+                c.create_oval(cx-radius,cy-radius,cx+radius,cy+radius,outline=["#35202a","#562d38","#813e49","#b84f54",ACCENT][5-n],width=2)
+            c.create_oval(cx-r,cy-r,cx+r,cy+r,fill="#351f29",outline="#f19887",width=1)
             for n in range(7):
                 x=cx+(n-3)*7; d=4+abs(math.sin(self.phase*2+n*.8))*(18 if active else 9)
                 c.create_line(x,cy-d,x,cy+d,fill=ACCENT,width=3)
         if hasattr(self,"avatar_canvas") and self.avatar_canvas.winfo_ismapped(): self.draw_avatar(active)
+        if hasattr(self,"town_canvas") and self.town_canvas.winfo_ismapped(): self.draw_town()
         if hasattr(self,"globe_canvas") and self.globe_canvas.winfo_ismapped(): self.draw_globe()
         self.after(60,self.animate)
     def draw_globe(self):
         c=self.globe_canvas; w=max(c.winfo_width(),170); h=max(c.winfo_height(),160)
-        c.delete("all"); cx=w/2; cy=h/2; r=min(w*.39,h*.40)
+        c.delete("all"); cx=w/2; cy=h*.47; r=min(w*.38,h*.37)
+        if self.map_mode=="2D":
+            c.create_rectangle(cx-r*1.42,cy-r*.67,cx+r*1.42,cy+r*.67,outline="#344252",width=1)
+            for i in range(1,5):
+                x=cx-r*1.42+i*(r*2.84/5); c.create_line(x,cy-r*.67,x,cy+r*.67,fill="#1c2938")
+            for i in range(1,3):
+                y=cy-r*.67+i*(r*1.34/3); c.create_line(cx-r*1.42,y,cx+r*1.42,y,fill="#1c2938")
+            for i,(dx,dy) in enumerate(((-.9,-.25),(-.28,.31),(.38,-.18),(.92,.25))):
+                x=cx+dx*r; y=cy+dy*r; pulse=2.5+1.4*(1+math.sin(self.phase*2+i))
+                c.create_oval(x-pulse,y-pulse,x+pulse,y+pulse,fill=ACCENT if i==0 else BLUE,outline="")
+            c.create_text(cx,min(h-6,cy+r*.88),text="LOCAL TASK MAP  ·  NO GPS",fill=DIM,font=(FONT,7,"bold"))
+            return
         c.create_oval(cx-r,cy-r,cx+r,cy+r,outline="#2a5367",width=1)
         c.create_oval(cx-r*.52,cy-r,cx+r*.52,cy+r,outline="#1b3a50",width=1)
         c.create_oval(cx-r*.19,cy-r,cx+r*.19,cy+r,outline="#173246",width=1)
@@ -642,17 +760,39 @@ class App(tk.Tk):
         for index in (3,14,25,34):
             x,y=points[index]; pulse=3+1.5*(1+math.sin(self.phase*2+index))
             c.create_oval(x-pulse,y-pulse,x+pulse,y+pulse,fill=ACCENT if index==14 else BLUE,outline="")
-        c.create_text(cx,min(h-8,cy+r+11),text="SESSION LOCAL  ·  ARCHIVE SYNCED",fill=DIM,font=(FONT,7,"bold"))
+        c.create_text(cx,min(h-6,cy+r+10),text="LOCAL ACTIVITY  ·  NO LOCATION TRACKING",fill=DIM,font=(FONT,7,"bold"))
+    def draw_town(self):
+        c=self.town_canvas; w=max(c.winfo_width(),360); h=max(c.winfo_height(),58); c.delete("all")
+        floor=h-13
+        c.create_line(16,floor,w-16,floor,fill="#344252",width=1)
+        agents=[("MANAGER",getattr(self,"manager_status_label",None),"#ed6a63")]
+        for item in getattr(self,"worker_controls",[])[:3]:
+            name=item["name"].get().strip() or "Worker"
+            status=self.worker_status_labels.get(item["id"])
+            agents.append((name,status,"#d5a47e"))
+        step=(w-52)/max(1,len(agents))
+        for i,(name,status_widget,tint) in enumerate(agents):
+            x=26+step*(i+.5); bob=math.sin(self.phase*2+i*1.2)*2 if self.gesture_enabled else 0
+            state=status_widget.cget("text") if status_widget and status_widget.winfo_exists() else "READY"
+            active=state.casefold() in ("working","running")
+            light=ACCENT if active else ("#7fb79a" if state.casefold() in ("ready","done") else BLUE)
+            c.create_rectangle(x-23,floor-17,x+23,floor-7,fill="#202b38",outline="#3b4958")
+            c.create_rectangle(x-3,floor-28+bob,x+3,floor-17+bob,fill=tint,outline="")
+            c.create_rectangle(x-8,floor-43+bob,x+8,floor-28+bob,fill=tint,outline="")
+            c.create_rectangle(x-6,floor-51+bob,x+6,floor-43+bob,fill="#f0c5a8",outline="")
+            c.create_rectangle(x+11,floor-49+bob,x+15,floor-45+bob,fill=light,outline="")
+            c.create_text(x,floor-58,text=name[:13].upper(),fill=TXT,font=(FONT,7,"bold"))
+            c.create_text(x,floor-4,text=state.upper()[:10],fill=light,font=(FONT,6,"bold"))
     def draw_avatar(self,active=False):
         c=self.avatar_canvas; w=max(c.winfo_width(),380); h=max(c.winfo_height(),300)
         c.delete("all"); cx=w*.51; head_y=h*.34; head_rx=min(w*.12,62); head_ry=min(h*.19,70)
         # Subtle orbital rings frame the particle character.
         orbit_y=h*.56; orbit_rx=min(w*.35,225); orbit_ry=min(h*.15,60)
-        c.create_oval(cx-orbit_rx,orbit_y-orbit_ry,cx+orbit_rx,orbit_y+orbit_ry,outline="#1c3d51",width=1)
+        c.create_oval(cx-orbit_rx,orbit_y-orbit_ry,cx+orbit_rx,orbit_y+orbit_ry,outline="#4b2a34",width=1)
         c.create_oval(cx-orbit_rx*.88,orbit_y-orbit_ry*.56,cx+orbit_rx*.88,orbit_y+orbit_ry*.56,
-                      outline="#21485a",width=1,dash=(4,7))
-        # The avatar is drawn from small teal and blue points so it can move with the live UI.
-        palette=["#255467","#32798a","#53b5b8","#7ce6d9","#8badff"]
+                      outline="#63333d",width=1,dash=(4,7))
+        # The original Bou character is drawn from small particles that move with the live UI.
+        palette=["#542f38","#81414a","#c05558","#ef7770","#f4b18a"]
         for i in range(150):
             u=((i*47)%149)/149; a=i*2.399963
             rr=math.sqrt(u); x=cx+math.cos(a)*head_rx*rr; y=head_y+math.sin(a)*head_ry*rr
@@ -677,16 +817,16 @@ class App(tk.Tk):
         # Delicate luminous eyes make the central silhouette read as a companion.
         eye_y=head_y-1; eye_dx=head_rx*.30
         for eye_x in (cx-eye_dx,cx+eye_dx):
-            c.create_oval(eye_x-2.4,eye_y-2.4,eye_x+2.4,eye_y+2.4,fill="#9af3e8",outline="")
-            c.create_oval(eye_x-5,eye_y-5,eye_x+5,eye_y+5,outline="#376f7e",width=1)
+            c.create_oval(eye_x-2.4,eye_y-2.4,eye_x+2.4,eye_y+2.4,fill="#ffe0cc",outline="")
+            c.create_oval(eye_x-5,eye_y-5,eye_x+5,eye_y+5,outline="#8d4b50",width=1)
         # Fine links and a soft chest core add depth without using a copied brand asset.
         for i in range(22):
             a=self.phase*.45+i*math.tau/22
             x=cx+math.cos(a)*orbit_rx*.76; y=orbit_y+math.sin(a)*orbit_ry*.66
-            c.create_oval(x-1.5,y-1.5,x+1.5,y+1.5,fill="#376c7e",outline="")
+            c.create_oval(x-1.5,y-1.5,x+1.5,y+1.5,fill="#9a5158",outline="")
         pulse=8+3*(1+math.sin(self.phase*(3 if active else 1.4)))
-        c.create_oval(cx-pulse*2,shoulder_y+42-pulse*2,cx+pulse*2,shoulder_y+42+pulse*2,outline="#275e70",width=1)
-        c.create_oval(cx-pulse,shoulder_y+42-pulse,cx+pulse,shoulder_y+42+pulse,fill="#72dfd1",outline="")
+        c.create_oval(cx-pulse*2,shoulder_y+42-pulse*2,cx+pulse*2,shoulder_y+42+pulse*2,outline="#8e454f",width=1)
+        c.create_oval(cx-pulse,shoulder_y+42-pulse,cx+pulse,shoulder_y+42+pulse,fill=ACCENT,outline="")
         c.create_text(cx,h*.965,text="BOU  ·  READY TO LISTEN",fill=DIM,font=(FONT,8,"bold"))
     def stats(self):
         if self.closing:return

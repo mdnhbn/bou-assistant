@@ -1,4 +1,4 @@
-# Bou AI Assistant · 1.4.0
+# Bou AI Assistant · 1.5.0
 
 Bou is a Windows desktop assistant with local conversation memory and an optional hosted service. Provider API keys stay on the service server; customers connect with individual access tokens.
 
@@ -10,6 +10,12 @@ Bou is a Windows desktop assistant with local conversation memory and an optiona
 - `studio_engine.py` and `studio_store.py`: local assistant, worker manager, memory, and hosted-service client.
 - `service/`: FastAPI service and owner admin panel.
 - `service/static/admin.html`: configure agent roles and key pairs, create or revoke customer accounts.
+
+## Desktop dashboard
+
+The 1.5.0 desktop screen uses a three-column layout inspired by the publicly visible Stonic product: a signal feed, Bou's animated character core and Agent Town, and the chat inspector. The feed reads public BBC World RSS headlines and links each headline to its BBC page. Search opens a browser results page; it does not give the AI an unrestricted web browser. The 2D/3D control changes a local activity illustration, not a live geographic map. Bou does not request GPS or camera access. Gesture toggles the character's idle animation; it is not camera-based gesture recognition.
+
+The layout and original Bou artwork are implemented in this project. Stonic release features not included in Bou 1.5.0 include phone calls, floating characters/live wallpaper, screen awareness, custom character personas, reminders, PDF/document attachments, full-page generated visuals, and web research inside AI answers.
 
 ## Hosted service setup
 
@@ -33,6 +39,13 @@ For internet-facing use, place the service behind HTTPS and use persistent serve
 Run `Start-Bou.bat` on Windows. Local mode uses the existing OpenRouter key from the local installation. Worker roles and manager instructions can be edited in Bou. The hosted admin key pool is used only when the app is set to service mode.
 
 ## Changelog
+
+### 1.5.0 — Stonic-inspired desktop dashboard
+
+- Reworked the Assistant screen into a signal feed, animated character core, Agent Town, and Voice/Agent/Notes chat inspector.
+- Added public BBC World RSS headlines, explicit browser search, task alerts, and local activity-map views with a 2D/3D illustration toggle.
+- Added hide/show controls for the feed and chat panels, live Manager/worker status in Agent Town, and a character-animation toggle.
+- Kept Bou's own branding and artwork. The activity map uses no location data; gesture control does not access a camera.
 
 ### 1.4.0 — Hosted service and administration
 
