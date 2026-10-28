@@ -1,0 +1,11 @@
+requests
+Pillow
+PyAutoGUI
+pyttsx3
+SpeechRecognition
+sounddevice
+edge-tts
+psutil
+keyring
+numpy
+faster-whisper

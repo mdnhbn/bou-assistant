@@ -19,7 +19,7 @@ call ".venv\Scripts\activate.bat"
 if not exist ".installed4" (
     echo Installing packages, please wait...
     python -m pip install --upgrade pip
-    pip install requests pillow pyautogui pyttsx3 SpeechRecognition sounddevice edge-tts psutil opencv-python keyring
+    pip install -r requirements.txt opencv-python
     if errorlevel 1 goto fail
     echo done> .installed4
 )

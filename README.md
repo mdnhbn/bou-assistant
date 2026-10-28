@@ -1,4 +1,4 @@
-# Bou AI Assistant · 1.8.0
+# Bou AI Assistant · 1.8.1
 
 Bou is a Windows desktop assistant with local conversation memory and an optional hosted service. Provider API keys stay on the service server; customers connect with individual access tokens.
 
@@ -39,17 +39,27 @@ For internet-facing use, place the service behind HTTPS and use persistent serve
 
 Run `Start-Bou.bat` on Windows. Local mode uses the existing OpenRouter key from the local installation. The launcher installs the optional OpenCV camera package if it is missing. Worker roles and manager instructions can be edited in Bou. The hosted admin key pool is used only when the app is set to service mode.
 
+On first run, `Start-Bou.bat` creates `.venv` when needed and installs the assistant's voice and desktop dependencies from `requirements.txt`.
+
 ## Camera, microphone, and PC control
 
 The Camera & PC page keeps camera access off until the user clicks **Capture one frame** and confirms. Bou captures one still, turns the camera off, previews the image, and sends it to the configured provider only after a second approval. The camera prompt asks for visible, non-sensitive details and does not identify the person. The image stays in memory and is not written to disk.
 
 Bou speaks a welcome when it opens, then starts a live microphone session by default if enabled in Settings. Speak naturally; when a phrase ends, Bou transcribes it, displays the words in chat, sends the text to the configured AI provider, and speaks the answer. The **Mic** button pauses or resumes listening. Raw microphone audio is not saved by Bou.
 
-Wispr Flow Voice Interface API is the default transcription provider. It requires approved Wispr API access and a key; usage may be billed. Save the key through Settings to the current session or Windows Credential Manager. Without a key, Bou will still greet you but will not send microphone audio to another service. Google Speech Recognition is an optional provider that sends audio to Google; Bou does not silently fall back to it.
+Local Whisper is the default transcription provider. The first live-listening startup downloads the multilingual `small` model (about 500 MB) into `%LOCALAPPDATA%\BouStudio\models\whisper`; later transcription runs on the PC without sending microphone audio to a speech service. Bou sends the recognized text to the configured AI provider to generate a reply. Wispr Flow and Google Speech Recognition remain optional cloud transcription providers and are clearly labeled in Settings.
 
 PC control is off by default and enabled only for the current session. Before every AI planning call, Bou shows the screenshot and asks before sharing it with the configured provider. It then displays one proposed click, key, scroll, or text entry and waits for approval. After executing at most that one action, it stops until the user requests another screenshot. Screenshots and PC-task details are not added to the conversation archive. Passwords, one-time codes, payments, purchases, sending/publishing, deletions, installs, agreements, and security-setting changes are blocked for the user to handle directly.
 
 ## Changelog
+
+### 1.8.1 — Live voice setup and local transcription
+
+- Applied the saved speech-output preference to Bou's original speech engine, so enabling voice replies is honored by both old and new code paths.
+- Restored the original Windows speech fallback when Edge TTS is unavailable or cannot play audio, for the startup greeting and spoken replies.
+- Updated the Studio launcher to create its virtual environment and install the microphone and speech dependencies on first run.
+- Added local Whisper transcription as the default live voice provider; the one-time model download is stored outside the project and microphone audio stays on the PC.
+- Kept Wispr Flow and Google as optional cloud providers with distinct setup and data-transfer notices.
 
 ### 1.8.0 — Bou identity cleanup
 

@@ -37,7 +37,7 @@ def entry(parent):
 class App(tk.Tk):
     def __init__(self,store=None,engine=None):
         super().__init__()
-        self.title("বউ — AI Assistant 1.8.0")
+        self.title("বউ — AI Assistant 1.8.1")
         self.geometry("1600x920+40+40")
         self.minsize(1180,760)
         try:self.state("zoomed")
@@ -47,9 +47,10 @@ class App(tk.Tk):
         self.store.recover()
         self.settings=self.store.settings()
         self.engine=engine or Engine()
+        mk.state["speech_out"]=bool(self.settings.get("speech_out",True))
         self.events=queue.Queue()
         self.busy=False; self.recording=False; self.voice_busy=False; self.closing=False
-        self.voice_session_active=False; self.voice_session_stop=threading.Event(); self.voice_pause=threading.Event(); self.voice_pause.set()
+        self.voice_session_active=False; self.voice_session_preparing=False; self.voice_session_stop=threading.Event(); self.voice_pause=threading.Event(); self.voice_pause.set()
         self.live_voice_buttons=[]
         self.current_task=None; self.phase=0; self.orbs=[]; self.page="assistant"; self.selected_note=None
         self.signal_view="today"; self.map_mode="3D"; self.gesture_enabled=True; self.headlines=[]; self.headlines_ready=False
@@ -397,10 +398,13 @@ class App(tk.Tk):
         for title,var in [("Speak AI replies and startup greeting",self.speech_var),("Start live microphone conversation when Bou opens",self.voice_auto_var),("Use conversation memory in AI chats",self.history_var),("Use saved notes in AI requests",self.memory_var)]:
             tk.Checkbutton(f,text=title,variable=var,bg=BG,fg=TXT,selectcolor=CARD2,activebackground=BG,activeforeground=TXT,font=(FONT,10)).pack(anchor="w",pady=9)
         label(f,"Speech-to-text provider",10,DIM).pack(anchor="w",pady=(8,5))
-        provider_name="Wispr Flow API" if self.settings.get("voice_provider","wispr")=="wispr" else "Google Speech Recognition"
+        provider_labels={"local_whisper":"Local Whisper (offline)","wispr":"Wispr Flow API","google":"Google Speech Recognition"}
+        provider_name=provider_labels.get(self.settings.get("voice_provider","local_whisper"),"Local Whisper (offline)")
         self.voice_provider_var=tk.StringVar(value=provider_name)
-        ttk.Combobox(f,textvariable=self.voice_provider_var,values=["Wispr Flow API","Google Speech Recognition"],state="readonly").pack(fill="x",pady=(0,8))
-        label(f,"Wispr Flow API key · requires Wispr Flow API access",10,DIM).pack(anchor="w",pady=(8,5))
+        ttk.Combobox(f,textvariable=self.voice_provider_var,values=["Local Whisper (offline)","Wispr Flow API","Google Speech Recognition"],state="readonly").pack(fill="x",pady=(0,8))
+        self.voice_provider_hint=label(f,"",9,DIM,wraplength=550,justify="left"); self.voice_provider_hint.pack(anchor="w",pady=(0,8))
+        self.voice_provider_var.trace_add("write",self.update_voice_provider_hint); self.update_voice_provider_hint()
+        label(f,"Wispr Flow API key · only needed when Wispr Flow is selected",10,DIM).pack(anchor="w",pady=(8,5))
         self.wispr_key_entry=entry(f); self.wispr_key_entry.configure(show="•"); self.wispr_key_entry.pack(fill="x",ipady=9)
         wispr_key_row=tk.Frame(f,bg=BG); wispr_key_row.pack(fill="x",pady=9)
         button(wispr_key_row,"Use this session",self.apply_wispr_key).pack(side="left")
@@ -567,11 +571,11 @@ class App(tk.Tk):
         self.recording=True; self.engine.cancel_event.clear()
         self.record_button.configure(text="Finish recording")
         self.set_phase("Recording","Up to 12 seconds. Press Finish when done.")
-        provider_name="Wispr Flow" if self.settings.get("voice_provider","wispr")=="wispr" else "Google Speech Recognition"
+        provider_name={"local_whisper":"Local Whisper","wispr":"Wispr Flow","google":"Google Speech Recognition"}.get(self.settings.get("voice_provider","local_whisper"),"Local Whisper")
         self.notify("Microphone active. Audio goes to "+provider_name+" for transcription.")
         def work():
             try:
-                text=self.engine.record(self.settings["language"],self.events,self.settings.get("voice_provider","wispr"))
+                text=self.engine.record(self.settings["language"],self.events,self.settings.get("voice_provider","local_whisper"))
                 self.events.put(("transcript",text))
             except Exception as exc: self.events.put(("voice_error",type(exc).__name__))
         threading.Thread(target=work,daemon=True).start()
@@ -800,12 +804,19 @@ class App(tk.Tk):
                 if tid==selected[0]:self.task_detail.configure(text=detail or STATUS.get(status,status))
     def refresh_voice_controls(self):
         if self.voice_session_active:
-            button_text="Mic: ON · pause"; page_text="Pause live conversation"
-            status="Microphone is active. Speak naturally; Bou will transcribe and answer aloud."
+            if self.voice_session_preparing:
+                button_text="Mic: STARTING · stop"; page_text="Stop live conversation"
+                status="Preparing offline Whisper. The microphone starts after the local model is ready."
+            else:
+                button_text="Mic: ON · pause"; page_text="Pause live conversation"
+                status="Microphone is active. Speak naturally; Bou will transcribe and answer aloud."
         else:
             button_text="Mic: OFF"; page_text="Start live conversation"
-            if self.settings.get("voice_provider","wispr")=="wispr" and not self.engine.wispr_api_key:
+            provider=self.settings.get("voice_provider","local_whisper")
+            if provider=="wispr" and not self.engine.wispr_api_key:
                 status="Add an approved Wispr Flow API key in Settings to start live listening."
+            elif provider=="local_whisper":status="Offline Whisper is selected. Speech stays on this PC; first use downloads its model once."
+            elif provider=="google":status="Google Speech Recognition is selected; microphone phrases are sent to Google."
             else:status="Microphone is off."
         for control in self.live_voice_buttons:
             try:control.configure(text=page_text if control is self.live_voice_buttons[-1] else button_text)
@@ -827,23 +838,32 @@ class App(tk.Tk):
         threading.Thread(target=greet,daemon=True).start()
     def start_voice_session(self):
         if self.voice_session_active:return True
-        provider=self.settings.get("voice_provider","wispr")
-        if not mk.sd or not mk.sr:
+        provider=self.settings.get("voice_provider","local_whisper")
+        if not mk.sd or (provider!="local_whisper" and not mk.sr):
             self.set_phase("Microphone unavailable","Install sounddevice and SpeechRecognition to use voice chat.")
             self.notify("Microphone packages are missing. Text chat is still available.",True); return False
         if provider=="wispr" and not self.engine.wispr_api_key:
             self.refresh_voice_controls(); self.set_phase("Wispr Flow setup needed","Add an approved Wispr Flow API key in Settings before live transcription.")
             self.notify("Wispr Flow API key required. Bou will not send voice audio to another transcription service.",True); return False
         self.voice_session_stop.clear(); self.voice_pause.clear(); self.voice_session_active=True
-        self.refresh_voice_controls(); self.set_phase("Starting microphone","Connecting to the selected speech-to-text service.")
+        self.voice_session_preparing=provider=="local_whisper"
+        self.refresh_voice_controls()
+        if provider=="local_whisper":self.set_phase("Preparing offline Whisper","The one-time model setup stays on this PC. The microphone starts when it is ready.")
+        else:self.set_phase("Starting microphone","Connecting to the selected speech-to-text service.")
         stop_event=self.voice_session_stop; pause_event=self.voice_pause; language=self.settings.get("language","bn-BD")
         def listen():
-            try:self.engine.listen_continuously(stop_event,pause_event,language,provider,self.events)
+            try:
+                if provider=="local_whisper":
+                    self.events.put(("voice_session_loading",None))
+                    self.engine.prepare_transcriber(provider)
+                    if stop_event.is_set():return
+                self.engine.listen_continuously(stop_event,pause_event,language,provider,self.events)
             except Exception as exc:self.events.put(("voice_session_error",str(exc)[:180]))
         threading.Thread(target=listen,daemon=True).start()
         return True
     def stop_voice_session(self,notify=True):
         self.voice_session_stop.set(); self.voice_pause.set(); self.voice_session_active=False
+        self.voice_session_preparing=False
         self.refresh_voice_controls(); self.set_phase("Ready","Microphone is off.")
         if notify:self.notify("Live microphone paused.")
     def toggle_voice_session(self):
@@ -851,18 +871,26 @@ class App(tk.Tk):
         else:self.start_voice_session()
     def resume_voice_after_speech(self):
         if self.voice_session_active and not self.voice_busy and not self.busy:self.voice_pause.clear()
+    def update_voice_provider_hint(self,*_):
+        provider=self.voice_provider_var.get()
+        descriptions={
+            "Local Whisper (offline)":"The multilingual Whisper model downloads once (~500 MB). Microphone audio is transcribed on this PC; transcript text is sent to the configured AI provider for replies.",
+            "Wispr Flow API":"Captured phrases are sent to Wispr Flow for transcription and require approved API access plus a key.",
+            "Google Speech Recognition":"Captured phrases are sent to Google Speech Recognition for transcription.",
+        }
+        self.voice_provider_hint.configure(text=descriptions.get(provider,""))
     def apply_wispr_key(self):
         key=self.wispr_key_entry.get().strip()
         if not key:self.notify("Paste your approved Wispr Flow API key first.",True); return
         self.engine.wispr_api_key=key; self.wispr_key_entry.delete(0,"end")
         self.notify("Wispr Flow key is active for this session.")
-        if self.settings.get("voice_provider","wispr")=="wispr" and self.settings.get("voice_auto_start",True):self.start_voice_session()
+        if self.settings.get("voice_provider","local_whisper")=="wispr" and self.settings.get("voice_auto_start",True):self.start_voice_session()
     def save_wispr_api_key(self):
         key=self.wispr_key_entry.get().strip()
         try:self.engine.save_wispr_api_key(key)
         except Exception as exc:self.notify("Wispr Flow key could not be saved ("+str(exc)[:120]+").",True); return
         self.wispr_key_entry.delete(0,"end"); self.notify("Wispr Flow API key saved in Windows Credential Manager.")
-        if self.settings.get("voice_provider","wispr")=="wispr" and self.settings.get("voice_auto_start",True):self.start_voice_session()
+        if self.settings.get("voice_provider","local_whisper")=="wispr" and self.settings.get("voice_auto_start",True):self.start_voice_session()
     def remove_saved_wispr_api_key(self):
         if not messagebox.askyesno("Remove Wispr Flow API key","Remove Bou's saved Wispr Flow key from this Windows account?"):return
         try:self.engine.remove_saved_wispr_api_key()
@@ -877,10 +905,11 @@ class App(tk.Tk):
         if backend_mode not in ("local","service"):self.notify("Choose local or service mode.",True); return
         if backend_mode=="service" and (not service_url.startswith(("https://","http://")) or not service_token):
             self.notify("Service mode needs a valid URL and customer access token.",True); return
-        provider="wispr" if self.voice_provider_var.get()=="Wispr Flow API" else "google"
+        provider={"Local Whisper (offline)":"local_whisper","Wispr Flow API":"wispr","Google Speech Recognition":"google"}.get(self.voice_provider_var.get(),"local_whisper")
         was_listening=self.voice_session_active
         if was_listening:self.stop_voice_session(notify=False)
         self.settings.update(mode=self.mode_var.get(),language=self.lang_var.get(),model=model,speech_out=self.speech_var.get(),voice_auto_start=self.voice_auto_var.get(),voice_provider=provider,use_memory=self.memory_var.get(),use_history=self.history_var.get(),backend_mode=backend_mode,service_url=service_url,service_token=service_token)
+        mk.state["speech_out"]=bool(self.settings["speech_out"])
         self.store.save_settings(self.settings); self.update_connection(); self.refresh_memory(); self.refresh_voice_controls(); self.notify("Preferences saved on this PC.")
         if self.settings["voice_auto_start"] and (was_listening or not self.voice_busy):self.after(500,self.start_voice_session)
     def save_workers(self):
@@ -1034,12 +1063,18 @@ class App(tk.Tk):
                     if self.settings.get("voice_auto_start",True):self.after(700,self.start_voice_session)
                 elif kind=="voice_session_ready":
                     if self.voice_session_active:
-                        self.refresh_voice_controls(); self.set_phase("Listening","Speak naturally. Pause between phrases and Bou will answer aloud.")
-                        self.notify("Live microphone is on. Speak naturally; Bou will transcribe and respond.")
+                        self.voice_session_preparing=False; self.refresh_voice_controls(); self.set_phase("Listening","Speak naturally. Pause between phrases and Bou will answer aloud.")
+                        provider=self.settings.get("voice_provider","local_whisper")
+                        notice="Offline Whisper is ready. Speak naturally; microphone audio stays on this PC." if provider=="local_whisper" else ("Live microphone is on. Google Speech Recognition receives each captured phrase." if provider=="google" else "Live microphone is on. Speak naturally; Bou will transcribe and respond.")
+                        self.notify(notice)
+                elif kind=="voice_session_loading":
+                    if self.voice_session_active:
+                        self.voice_session_preparing=True; self.refresh_voice_controls()
+                        self.set_phase("Preparing offline Whisper","Downloading or loading the local model. No microphone audio is sent.")
                 elif kind=="voice_session_stopped":
-                    if self.voice_session_active:self.voice_session_active=False; self.refresh_voice_controls()
+                    if self.voice_session_active:self.voice_session_active=False; self.voice_session_preparing=False; self.refresh_voice_controls()
                 elif kind=="voice_session_error":
-                    self.voice_session_active=False; self.voice_session_stop.set(); self.voice_pause.set(); self.refresh_voice_controls()
+                    self.voice_session_active=False; self.voice_session_preparing=False; self.voice_session_stop.set(); self.voice_pause.set(); self.refresh_voice_controls()
                     self.set_phase("Microphone unavailable",str(data)[:140]); self.notify("Live microphone could not start: "+str(data)[:140],True)
                 elif kind=="voice_auto_status":
                     if self.voice_session_active:self.set_phase("Transcribing",str(data))
@@ -1076,7 +1111,7 @@ class App(tk.Tk):
         def worker():
             items=[]
             try:
-                request=Request("https://feeds.bbci.co.uk/news/world/rss.xml",headers={"User-Agent":"BouAssistant/1.8.0 (public RSS headlines)"})
+                request=Request("https://feeds.bbci.co.uk/news/world/rss.xml",headers={"User-Agent":"BouAssistant/1.8.1 (public RSS headlines)"})
                 with urlopen(request,timeout=8) as response:raw=response.read(1_500_000)
                 root=ET.fromstring(raw)
                 for item in root.findall("./channel/item")[:5]:

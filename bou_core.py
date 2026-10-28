@@ -208,15 +208,16 @@ def tts_neural(text):
 
 def tts_fallback(text):
     if not pyttsx3:
-        return
+        return False
     try:
         engine = pyttsx3.init()
         engine.setProperty("rate", 165)
         engine.say(text[:500])
         engine.runAndWait()
         engine.stop()
+        return True
     except Exception:
-        pass
+        return False
 
 
 def speak(text):

@@ -10,9 +10,22 @@ if not exist "bou_core.py" (
   exit /b 1
 )
 if not exist ".venv\Scripts\python.exe" (
-  echo First run Bou-Assistant.bat to set up its Python environment.
-  pause
-  exit /b 1
+  where python >nul 2>&1
+  if errorlevel 1 goto nopython
+  echo Creating Bou's Python environment...
+  python -m venv .venv
+  if errorlevel 1 goto fail
+)
+".venv\Scripts\python.exe" -m pip --version >nul 2>&1
+if errorlevel 1 (
+  ".venv\Scripts\python.exe" -m ensurepip
+  if errorlevel 1 goto fail
+)
+".venv\Scripts\python.exe" -c "import requests,PIL,pyautogui,pyttsx3,speech_recognition,sounddevice,edge_tts,psutil,keyring,numpy,faster_whisper" >nul 2>&1
+if errorlevel 1 (
+  echo Installing Bou's assistant, live voice, and offline Whisper packages...
+  ".venv\Scripts\python.exe" -m pip install -r requirements.txt
+  if errorlevel 1 goto fail
 )
 ".venv\Scripts\python.exe" -c "import cv2" >nul 2>&1
 if errorlevel 1 (
@@ -30,3 +43,15 @@ if errorlevel 1 (
 )
 ".venv\Scripts\python.exe" -B bou_studio.py
 if errorlevel 1 pause
+exit /b 0
+
+:nopython
+echo ERROR: Python is not installed or not in PATH. Install Python 3.11 or newer, then run Start-Bou.bat again.
+pause
+exit /b 1
+
+:fail
+echo.
+echo Bou setup failed. Read the messages above.
+pause
+exit /b 1

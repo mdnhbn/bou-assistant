@@ -1,4 +1,4 @@
-# Bou AI Assistant 1.8.0
+# Bou AI Assistant 1.8.1
 
 Bou হলো Windows desktop AI assistant, সঙ্গে conversation memory, Manager ও Worker দল, এবং বিক্রির জন্য ব্যবহারকারীভিত্তিক hosted service। Assistant-এর source, service, admin panel ও changelog এই repository-তে রাখা হয়।
 
@@ -6,7 +6,7 @@ Bou হলো Windows desktop AI assistant, সঙ্গে conversation memory,
 
 ### লোকাল ডেস্কটপ মোড
 
-Windows-এ `Start-Bou.bat` চালান। এই installation-এ আগে থেকে থাকা Python environment এবং `key.txt` ব্যবহার করে। Camera feature-এর OpenCV package না থাকলে launcher সেটি ইনস্টল করবে। Settings-এ `Assistant connection` হিসেবে `local` রাখুন। লোকাল মোডে সব AI call আপনার বিদ্যমান একক OpenRouter key দিয়ে হয়।
+Windows-এ `Start-Bou.bat` চালান। প্রথমবার এটি প্রয়োজন হলে `.venv` বানিয়ে `requirements.txt` থেকে microphone, speech ও desktop package ইনস্টল করবে। Camera feature-এর OpenCV package না থাকলে launcher সেটি ইনস্টল করবে। Settings-এ `Assistant connection` হিসেবে `local` রাখুন। লোকাল মোডে সব AI call আপনার বিদ্যমান একক OpenRouter key দিয়ে হয়।
 
 ### Hosted service মোড
 
@@ -52,9 +52,9 @@ Voice, image analysis, activity log এবং Settings-এর আরও বি�
 
 `Camera & PC` পেজে **Capture one frame** চাপার পর নিশ্চিত করলেই ক্যামেরা একবার চালু হয়। Bou একটি still frame নিয়ে সঙ্গে সঙ্গে ক্যামেরা বন্ধ করে, ছবিটি local preview-তে দেখায় এবং AI provider-এ পাঠানোর আগে আবার অনুমতি চায়। উত্তরটি দৃশ্যমান, সংবেদনশীল নয় এমন বৈশিষ্ট্য—যেমন পোশাক, চুল, accessories ও ভঙ্গি—নিয়ে হয়; Bou ব্যক্তিকে শনাক্ত করে না। ছবিটি disk-এ লেখা হয় না।
 
-Bou চালু হলে স্বাগত জানায়, তারপর Settings-এ চালু থাকলে live microphone session শুরু করে। মাইক চালু থাকা অবস্থায় স্বাভাবিকভাবে কথা বলুন; বাক্যের বিরতি পেলেই Bou সেটি transcription provider-এ পাঠায়, লেখা chat-এ দেখায়, configured AI-তে পাঠায় এবং উত্তর মুখে বলে। Header-এর `Mic` বোতামে শোনা থামানো যায়। Bou raw microphone audio save করে না।
+Bou চালু হলে স্বাগত জানায়, তারপর Settings-এ চালু থাকলে live microphone session শুরু করে। Default Local Whisper প্রথমবার চালু হলে multilingual `small` model (প্রায় 500 MB) `%LOCALAPPDATA%\BouStudio\models\whisper`-এ download করে; এরপর transcription PC-তেই চলে এবং microphone audio কোনো speech service-এ পাঠায় না। Bou transcript text configured AI provider-এ পাঠিয়ে উত্তর আনে। Settings থেকে Wispr Flow বা Google বেছে নিলে microphone audio ওই service-এ যায়। Header-এর `Mic` বোতামে শোনা থামানো যায়; Bou raw microphone audio save করে না।
 
-ডিফল্ট transcription provider হলো Wispr Flow Voice Interface API। এর জন্য Wispr-এর অনুমোদিত API access ও key দরকার; ব্যবহারে charge হতে পারে। key Settings থেকে Windows Credential Manager-এ নিরাপদে রাখা হয়। Key না থাকলে Bou greeting বলবে, কিন্তু microphone audio অন্য কোনো transcription service-এ পাঠাবে না। বিকল্প হিসেবে Settings থেকে Google Speech Recognition বেছে নেওয়া যায়; এতে audio Google-এ যায়।
+Default transcription provider হলো Local Whisper; এর model একবার ডাউনলোডের পর speech recognition offline-এ চলে। Wispr Flow বা Google বেছে নিলে microphone audio সেই cloud service-এ পাঠানো হবে; Wispr-এর জন্য approved API key লাগে। Bou নিজে থেকে cloud transcription-এ fallback করে না।
 
 PC control default-এ বন্ধ এবং শুধু চলতি session-এ চালু হয়। প্রতিটি ধাপের আগে Bou screenshot দেখায়; AI-কে পাঠানোর অনুমতি চাইলে তবেই screenshot পাঠায়। AI একটি click, key, scroll বা text entry প্রস্তাব করে; Bou চালানোর আগে ওই একক action-এর জন্য আলাদা অনুমতি চায়। একটি action চালানোর পর থামে; পরের screenshot আপনি চাইলে তবেই নেয়। Screenshot বা PC task-এর বিবরণ chat archive-এ লেখা হয় না। Password/OTP, payment/কেনাকাটা, message পাঠানো বা প্রকাশ, file deletion, software install, agreement গ্রহণ ও security setting পরিবর্তন Bou block করে—এসব আপনি নিজে করবেন।
 
@@ -69,6 +69,14 @@ Bou 1.6.0-তে একবারের camera description এবং অনুম
 মূল desktop assistant এবং নতুন Bou interface-এর source, service code, Docker configuration, admin UI ও প্রয়োজনীয় image এই repository-তে রাখা হয়। Secret key, `.env`, Python virtual environment, local database ও generated install flags `.gitignore` দিয়ে বাদ দেওয়া হয়। প্রতিটি release-এ সংস্করণ বাড়িয়ে এই README-এর Changelog-এ কী বদলেছে তা লিখুন।
 
 ## Changelog
+
+### 1.8.1 — Live voice setup ও local transcription
+
+- Saved speech-output preference এখন Bou-র মূল speech engine-এও প্রয়োগ হয়; পুরোনো ও নতুন code path একই preference মানে।
+- Edge TTS unavailable হলে startup greeting ও spoken reply-তে আগের Windows speech fallback ফিরে এসেছে।
+- Studio launcher এখন প্রথমবার প্রয়োজনীয় microphone ও speech dependencies নিজেই সেটআপ করে।
+- Offline Whisper default transcription provider; একবারের model download project-এর বাইরে থাকে এবং microphone audio PC-তেই transcription হয়।
+- Wispr Flow ও Google ঐচ্ছিক cloud provider হিসেবে Settings-এ আলাদা করে দেখানো হয়।
 
 ### 1.8.0 — Bou নাম ও পরিচ্ছন্ন branding
 

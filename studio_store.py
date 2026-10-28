@@ -8,7 +8,7 @@ DEFAULT_WORKERS = [
     {"id":"reviewer","name":"পর্যালোচক","instructions":"Solve or review the request independently. Check for missing details, contradictions, and likely errors. Do not claim to browse or use tools.","enabled":True},
 ]
 DEFAULT_MANAGER = {"name":"Manager","instructions":"Understand the user's goal, split it into distinct non-overlapping subtasks, and assign each enabled worker the task that best fits its role. Make assignments specific and useful. Do not invent tools, browsing, or computer access."}
-DEFAULTS = {"mode":"chat","model":"google/gemini-2.5-flash","language":"bn-BD","speech_out":True,"voice_auto_start":True,"voice_provider":"wispr","use_memory":False,"use_history":True,"worker_mode":"auto","manager":DEFAULT_MANAGER,"workers":DEFAULT_WORKERS,"backend_mode":"local","service_url":"","service_token":""}
+DEFAULTS = {"mode":"chat","model":"google/gemini-2.5-flash","language":"bn-BD","speech_out":True,"voice_auto_start":True,"voice_provider":"local_whisper","use_memory":False,"use_history":True,"worker_mode":"auto","manager":DEFAULT_MANAGER,"workers":DEFAULT_WORKERS,"backend_mode":"local","service_url":"","service_token":""}
 TOKEN_RE = re.compile(r"[^\W_]{2,}", re.UNICODE)
 STOPWORDS = set("a an and are as at be but by can do for from how i in is it me my of on or our so that the their them then there this to was we what when where who why with you your আমি আমার আমরা আর এটা এই ওই সে তিনি কিন্তু যেন তুমি তোমার তোমাকে আপনি আপনার কি কী কিভাবে কেন কোথায় কোথায় থেকে জন্য হলে হবে হয় হয় আছে ছিল ছিলাম বলো বলেছি করো করে করা করতে একটা কিছু সব খুব এখন পরে আগে মধ্যে উপর নিচে".split())
 RECALL_HINTS = ("আগে", "আগের", "বলেছিল", "মনে আছে", "মনে কর", "remember", "previous", "earlier", "last time", "what did i")
@@ -36,8 +36,8 @@ class Store:
                 except ValueError: pass
         if values.get("worker_mode") not in ("auto","always","off"):
             values["worker_mode"]="auto"
-        if values.get("voice_provider") not in ("wispr","google"):
-            values["voice_provider"]="wispr"
+        if values.get("voice_provider") not in ("local_whisper","wispr","google"):
+            values["voice_provider"]="local_whisper"
         if not isinstance(values.get("manager"),dict):
             values["manager"]=json.loads(json.dumps(DEFAULT_MANAGER,ensure_ascii=False))
         return values
