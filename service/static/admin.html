@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="bn">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Bou · Admin</title>
+  <style>
+    :root{color-scheme:dark;--bg:#0a101c;--nav:#0c1422;--card:#121e30;--card2:#17263c;--line:#243650;--txt:#edf4ff;--dim:#9bacc5;--accent:#73e0d1;--red:#ff8f9f}
+    *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--txt);font:15px "Segoe UI",sans-serif}header{height:68px;padding:0 28px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;background:var(--nav);position:sticky;top:0}h1{font-size:18px;margin:0;letter-spacing:.08em}h2{font-size:21px;margin:0 0 8px}h3{font-size:15px;margin:0;color:var(--accent)}p{color:var(--dim);line-height:1.55}.tag{font-size:11px;color:var(--accent);letter-spacing:.12em}.wrap{max-width:1050px;margin:28px auto;padding:0 20px}.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:18px;margin:12px 0}.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.between{justify-content:space-between}.tabs{display:flex;gap:8px;margin:20px 0}.hidden{display:none!important}label{display:block;color:var(--dim);font-size:12px;margin:10px 0 5px}input,textarea,select{width:100%;border:1px solid var(--line);border-radius:7px;background:var(--card2);color:var(--txt);padding:10px;font:14px "Segoe UI",sans-serif}textarea{min-height:82px;resize:vertical}input[type=checkbox]{width:auto;accent-color:var(--accent)}button{border:0;border-radius:7px;padding:10px 14px;background:var(--card2);color:var(--txt);font-weight:600;cursor:pointer}button.primary{background:var(--accent);color:var(--bg)}button.danger{color:var(--red)}button:hover{filter:brightness(1.14)}.fieldgrid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.slot{display:grid;grid-template-columns:1fr auto auto;gap:8px;align-items:end;margin:8px 0}.slot input{min-width:160px}.badge{font-size:11px;color:var(--dim);padding:5px 9px;border:1px solid var(--line);border-radius:99px}.badge.on{color:var(--accent)}.message{padding:10px 12px;border-radius:7px;background:#142535;color:var(--accent);white-space:pre-wrap}.message.error{color:var(--red)}.token{width:100%;min-height:80px;font-family:Consolas,monospace}.customer{display:grid;grid-template-columns:1fr auto auto;gap:10px;align-items:center;padding:10px 0;border-bottom:1px solid var(--line)}.foot{font-size:12px;color:var(--dim);margin-top:22px}.subtle{font-size:12px;color:var(--dim)}@media(max-width:700px){.fieldgrid{grid-template-columns:1fr}.slot{grid-template-columns:1fr auto}.slot input{grid-column:1/-1}.customer{grid-template-columns:1fr auto}.customer .badge{grid-column:1}}
+  </style>
+</head>
+<body>
+  <header><h1>BOU <span class="tag">/ ADMIN CONTROL</span></h1><span id="sessionState" class="subtle">Admin session locked</span></header>
+  <main class="wrap">
+    <section id="login" class="card">
+      <h2>Owner access</h2><p>Enter the server's <code>BOU_ADMIN_TOKEN</code>. This session token stays in this browser tab only.</p>
+      <div class="row"><input id="adminToken" type="password" autocomplete="current-password" placeholder="Admin token"><button id="loginBtn" class="primary">Unlock panel</button></div>
+    </section>
+    <section id="panel" class="hidden">
+      <div class="tabs"><button data-tab="agents" class="primary">Agents & API keys</button><button data-tab="customers">Customers</button><button id="logoutBtn">Lock</button></div>
+      <div id="notice" class="message hidden"></div>
+      <section id="agentsTab">
+        <h2>Manager and worker agents</h2>
+        <p>Each agent has two independent OpenRouter keys. Keys are encrypted on the server and are never returned to this page. If a key is rejected or reaches a provider limit, Bou tries that agent's other configured key.</p>
+        <div id="agents"></div>
+      </section>
+      <section id="customersTab" class="hidden">
+        <h2>Customer accounts</h2><p>Create an access token for a customer. The token is shown once; they enter it in Bou under Settings → service mode.</p>
+        <div class="card"><label>Customer name</label><div class="row"><input id="customerName" placeholder="Customer or account label"><button id="createCustomer" class="primary">Create customer</button></div></div>
+        <div id="newToken" class="card hidden"><div class="row between"><h3>Copy this customer token now</h3><button id="closeToken">Done</button></div><p>It cannot be read again after closing this panel.</p><textarea id="tokenValue" class="token" readonly></textarea><button id="copyToken">Copy token</button></div>
+        <div id="customers"></div>
+      </section>
+      <p class="foot">Keep this admin token and the server's encryption key private. Use HTTPS when customers connect over the internet.</p>
+    </section>
+  </main>
+  <script>
+    const $=id=>document.getElementById(id), tokenKey="bou-admin-session";
+    let adminToken=sessionStorage.getItem(tokenKey)||"";
+    const headers=()=>({"Content-Type":"application/json","X-Bou-Admin":adminToken});
+    function notice(text,error=false){const el=$("notice");el.textContent=text;el.classList.remove("hidden","error");if(error)el.classList.add("error");}
+    async function api(path,options={}){const r=await fetch(path,{...options,headers:{...headers(),...(options.headers||{})}});let d={};try{d=await r.json()}catch{}if(!r.ok)throw Error(d.detail||"Request failed ("+r.status+")");return d}
+    async function unlock(){adminToken=$("adminToken").value.trim();if(!adminToken)return;sessionStorage.setItem(tokenKey,adminToken);try{await loadAgents();$("login").classList.add("hidden");$("panel").classList.remove("hidden");$("sessionState").textContent="Admin session unlocked";await loadCustomers()}catch(e){sessionStorage.removeItem(tokenKey);adminToken="";notice(e.message,true)}}
+    function esc(s){return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]))}
+    async function loadAgents(){const data=await api("/admin/api/agents");$("agents").innerHTML="";for(const a of data.agents){const card=document.createElement("article");card.className="card";card.innerHTML=`<div class="row between"><h3>${esc(a.id==="manager"?"MANAGER · ROUTER + FINAL SYNTHESIS":"WORKER · "+a.id.toUpperCase())}</h3><span class="badge ${a.enabled?"on":""}">${a.enabled?"Enabled":"Disabled"}</span></div><div class="fieldgrid"><div><label>Display name</label><input data-name value="${esc(a.name)}"></div><div><label>OpenRouter model</label><input data-model value="${esc(a.model)}"></div></div><label>Role instructions</label><textarea data-instructions>${esc(a.instructions)}</textarea><label><input data-enabled type="checkbox" ${a.enabled?"checked":""}> Agent enabled</label><div class="row"><button data-save-agent class="primary">Save agent settings</button><span class="subtle">Key slots: ${a.keys[0]?"1 set":"1 empty"} · ${a.keys[1]?"2 set":"2 empty"}</span></div><div class="slot"><input data-key="1" type="password" autocomplete="new-password" placeholder="New API key · slot 1"><button data-set-key="1">Save key 1</button><button data-clear-key="1" class="danger">Clear</button></div><div class="slot"><input data-key="2" type="password" autocomplete="new-password" placeholder="New API key · slot 2"><button data-set-key="2">Save key 2</button><button data-clear-key="2" class="danger">Clear</button></div>`;
+      card.querySelector("[data-save-agent]").onclick=async()=>{try{await api("/admin/api/agents/"+encodeURIComponent(a.id),{method:"PUT",body:JSON.stringify({name:card.querySelector("[data-name]").value,instructions:card.querySelector("[data-instructions]").value,model:card.querySelector("[data-model]").value,enabled:card.querySelector("[data-enabled]").checked})});notice("Saved settings for "+a.name);await loadAgents()}catch(e){notice(e.message,true)}};
+      for(const slot of [1,2]){card.querySelector(`[data-set-key="${slot}"]`).onclick=async()=>{const input=card.querySelector(`[data-key="${slot}"]`);if(!input.value.trim()){notice("Enter a new key first.",true);return}try{await api(`/admin/api/agents/${encodeURIComponent(a.id)}/keys/${slot}`,{method:"PUT",body:JSON.stringify({key:input.value.trim()})});input.value="";notice("Encrypted key slot saved for "+a.name);await loadAgents()}catch(e){notice(e.message,true)}};card.querySelector(`[data-clear-key="${slot}"]`).onclick=async()=>{if(!confirm("Clear key slot "+slot+" for "+a.name+"?"))return;try{await api(`/admin/api/agents/${encodeURIComponent(a.id)}/keys/${slot}`,{method:"PUT",body:JSON.stringify({clear:true})});notice("Key slot cleared.");await loadAgents()}catch(e){notice(e.message,true)}}}
+      $("agents").append(card)}}
+    async function loadCustomers(){const data=await api("/admin/api/customers");$("customers").innerHTML="";for(const c of data.customers){const row=document.createElement("div");row.className="customer";row.innerHTML=`<div><strong>${esc(c.name)}</strong><div class="subtle">Created ${esc(new Date(c.created_at).toLocaleString())}</div></div><span class="badge ${c.active?"on":""}">${c.active?"Active":"Disabled"}</span><div class="row"><button data-toggle>${c.active?"Disable":"Enable"}</button><button data-delete class="danger">Revoke</button></div>`;row.querySelector("[data-toggle]").onclick=async()=>{try{await api("/admin/api/customers/"+c.id,{method:"PATCH",body:JSON.stringify({active:!c.active})});await loadCustomers()}catch(e){notice(e.message,true)}};row.querySelector("[data-delete]").onclick=async()=>{if(!confirm("Revoke and remove this customer's access?"))return;try{await api("/admin/api/customers/"+c.id,{method:"DELETE"});await loadCustomers()}catch(e){notice(e.message,true)}};$("customers").append(row)}}
+    $("loginBtn").onclick=unlock;$("adminToken").addEventListener("keydown",e=>{if(e.key==="Enter")unlock()});
+    $("logoutBtn").onclick=()=>{sessionStorage.removeItem(tokenKey);adminToken="";$("panel").classList.add("hidden");$("login").classList.remove("hidden");$("adminToken").value="";$("sessionState").textContent="Admin session locked"};
+    document.querySelectorAll("[data-tab]").forEach(b=>b.onclick=()=>{document.querySelectorAll("[data-tab]").forEach(x=>x.classList.toggle("primary",x===b));$("agentsTab").classList.toggle("hidden",b.dataset.tab!=="agents");$("customersTab").classList.toggle("hidden",b.dataset.tab!=="customers")});
+    $("createCustomer").onclick=async()=>{const name=$("customerName").value.trim();if(!name){notice("Enter a customer name.",true);return}try{const d=await api("/admin/api/customers",{method:"POST",body:JSON.stringify({name})});$("customerName").value="";$("tokenValue").value=d.access_token;$("newToken").classList.remove("hidden");notice("Customer created. Copy the access token now.");await loadCustomers()}catch(e){notice(e.message,true)}};
+    $("copyToken").onclick=async()=>{await navigator.clipboard.writeText($("tokenValue").value);notice("Customer token copied.")};$("closeToken").onclick=()=>{$("tokenValue").value="";$("newToken").classList.add("hidden")};
+    if(adminToken){$("adminToken").value=adminToken;unlock()}
+  </script>
+</body>
+</html>

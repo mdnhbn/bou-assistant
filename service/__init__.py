@@ -1,0 +1,1 @@
+"""Bou hosted service."""

@@ -1,0 +1,12 @@
+services:
+  bou-service:
+    build: .
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      BOU_SERVICE_DB: /app/service/data/bou-service.sqlite3
+    volumes:
+      - ./service/data:/app/service/data
+    ports:
+      - "127.0.0.1:8000:8000"

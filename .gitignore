@@ -1,0 +1,26 @@
+# Secrets and local credentials
+.env
+.env.*
+!.env.example
+key.txt
+*.key
+*.pem
+credentials.json
+
+# Python environments and generated files
+.venv/
+venv/
+env/
+__pycache__/
+*.py[cod]
+*.log
+
+# Local service and desktop data
+service/data/
+*.sqlite
+*.sqlite3
+*.db
+
+# Existing installer flags and scratch artifacts
+.installed*
+installed*
