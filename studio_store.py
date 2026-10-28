@@ -14,7 +14,7 @@ STOPWORDS = set("a an and are as at be but by can do for from how i in is it me 
 RECALL_HINTS = ("আগে", "আগের", "বলেছিল", "মনে আছে", "মনে কর", "remember", "previous", "earlier", "last time", "what did i")
 class Store:
     def __init__(self, path=None):
-        self.path=Path(path or os.environ.get("MAKIMA_STUDIO_DB") or Path(os.environ.get("LOCALAPPDATA",str(Path.home())))/"MakimaStudio"/"studio.sqlite3")
+        self.path=Path(path or os.environ.get("BOU_STUDIO_DB") or Path(os.environ.get("LOCALAPPDATA",str(Path.home())))/"BouStudio"/"studio.sqlite3")
         self.path.parent.mkdir(parents=True,exist_ok=True)
         self.db=sqlite3.connect(self.path)
         self.db.execute("PRAGMA journal_mode=WAL")

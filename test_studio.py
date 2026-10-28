@@ -4,7 +4,7 @@ from unittest.mock import patch
 sys.dont_write_bytecode=True
 from studio_store import Store
 from studio_engine import Engine
-from makima_studio import App
+from bou_studio import App
 
 class StoreTests(unittest.TestCase):
     def setUp(self):
@@ -67,7 +67,7 @@ class EngineTests(unittest.TestCase):
             self.assertNotIn("test-key",self.e.execute("Hello",self.s,[],[])["text"])
 
 def gui_smoke():
-    root=Path(os.environ["MAKIMA_TEST_OUTPUT"])
+    root=Path(os.environ["BOU_TEST_OUTPUT"])
     store=Store(root/("gui-test-"+str(time.time_ns())+".sqlite"))
     app=App(store=store);app.update()
     evidence={"window":app.winfo_geometry(),"pages":{}}

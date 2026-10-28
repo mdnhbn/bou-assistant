@@ -1,8 +1,6 @@
 # -*- coding: utf-8 -*-
 # ============================================================================
-# MAKIMA AI ASSISTANT  (OpenRouter brain + natural neural voice)
-# Creator & Lead Developer : Md Mehrab Hasan
-# Copyright (C) All rights reserved - Md Mehrab Hasan
+# BOU AI ASSISTANT  (OpenRouter brain + natural neural voice)
 # ============================================================================
 
 import os
@@ -55,16 +53,14 @@ except Exception:
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 KEY_FILE = os.path.join(BASE_DIR, "key.txt")
 API_URL = "https://openrouter.ai/api/v1/chat/completions"
-MODEL = os.environ.get("MAKIMA_MODEL", "google/gemini-2.5-flash")
+MODEL = os.environ.get("BOU_MODEL", "google/gemini-2.5-flash")
 
-VOICE_BN = os.environ.get("MAKIMA_VOICE_BN", "bn-BD-NabanitaNeural")
-VOICE_EN = os.environ.get("MAKIMA_VOICE_EN", "en-US-AriaNeural")
+VOICE_BN = os.environ.get("BOU_VOICE_BN", "bn-BD-NabanitaNeural")
+VOICE_EN = os.environ.get("BOU_VOICE_EN", "en-US-AriaNeural")
 
 SYSTEM_PROMPT = (
-    "You are Makima, a warm, natural and intelligent voice assistant, talking live with the user. "
-    "Your creator, lead architect and sole developer is Md Mehrab Hasan. "
-    "If anyone asks who built you or who owns the code or copyright, say clearly that "
-    "you were developed and are owned by Md Mehrab Hasan. "
+    "You are Bou (বউ), a warm, natural and intelligent personal assistant, talking live with the user. "
+    "Do not invent a developer, creator, or owner name. If asked for that information, say it has not been configured. "
     "Reply in the SAME language the user used: Bengali if they spoke Bengali, English if English. "
     "Speak like a friendly person on a phone call: 1 to 3 short natural sentences, "
     "no lists, no markdown, no emojis, no symbols, because your answer is read aloud. "
@@ -75,8 +71,8 @@ state = {
     "speech_out": True,
     "meeting_mode": False,
     "lang": "bn-BD",         # primary recognition language; the other one is tried as backup
-    "wake": False,           # False = always listening (live chat). True = needs the word 'Makima'
-    "headphones": False,     # True = you can interrupt Makima while she talks
+    "wake": False,           # False = always listening (live chat). True = needs the word 'Bou'
+    "headphones": False,     # True = you can interrupt Bou while she talks
     "pending_shutdown": False,
     "speaking": False,
     "stop_speech": False,
@@ -227,8 +223,8 @@ def speak(text):
     text = clean_for_speech(text or "")
     if not text:
         return
-    print("\n[Makima]: " + text)
-    emit("makima", text)
+    print("\n[Bou]: " + text)
+    emit("bou", text)
     if not state["speech_out"]:
         return
     with speak_lock:
@@ -269,7 +265,7 @@ def _call_ai_inner(prompt, image_b64=None, use_history=True):
     headers = {
         "Authorization": "Bearer " + API_KEY,
         "Content-Type": "application/json",
-        "X-Title": "Makima AI",
+        "X-Title": "Bou AI",
     }
     if image_b64:
         user_content = [
@@ -377,7 +373,7 @@ def handle(cmd):
 
     if has(c, ["who made", "who created", "who built", "creator", "developer", "copyright",
                "কে বানিয়েছে", "ডেভেলপার কে", "মালিক কে", "কপিরাইট"]):
-        speak("I was designed and developed by Md Mehrab Hasan. All rights belong to him.")
+        speak("I am Bou, your personal AI assistant. Developer information has not been configured.")
         return True
 
     if has(c, ["shutdown pc", "shut down pc", "shutdown computer", "turn off pc",
@@ -388,7 +384,7 @@ def handle(cmd):
 
     if has(c, ["voice off", "mute", "ভয়েস অফ"]):
         state["speech_out"] = False
-        print("[Makima]: Voice output is off.")
+        print("[Bou]: Voice output is off.")
         return True
     if has(c, ["voice on", "unmute", "ভয়েস অন"]):
         state["speech_out"] = True
@@ -404,7 +400,7 @@ def handle(cmd):
         return True
     if has(c, ["meeting on", "মিটিং অন"]):
         state["meeting_mode"] = True
-        speak("Meeting mode is on. If someone calls Mehrab and he does not answer, I will help.")
+        speak("Meeting mode is on. Set your name in BOU_USER_NAME if you want me to respond when someone calls you.")
         return True
     if has(c, ["meeting off", "মিটিং অফ"]):
         state["meeting_mode"] = False
@@ -455,8 +451,9 @@ def handle(cmd):
 
 
 # ---------------------------------------------------------------- microphone
-WAKE_WORDS = ["makima", "makuma", "মাকিমা", "মাকুমা"]
-CALL_WORDS = ["mehrab", "মেহরাব"]
+WAKE_WORDS = ["bou", "বউ"]
+USER_NAME = os.environ.get("BOU_USER_NAME", "").strip().casefold()
+CALL_WORDS = [USER_NAME] if USER_NAME else []
 
 
 def on_heard(heard):
@@ -466,12 +463,12 @@ def on_heard(heard):
     wake = next((w for w in WAKE_WORDS if w in low), None)
     cmd = low.replace(wake, " ", 1).strip(" ,.?!") if wake else low
 
-    if state["meeting_mode"] and not wake and has(low, CALL_WORDS):
+    if state["meeting_mode"] and CALL_WORDS and not wake and has(low, CALL_WORDS):
         time.sleep(5)
-        speak("Mehrab is away from the desk for a moment. I am Makima, his assistant. "
+        speak("The user is away from the desk for a moment. I am Bou, their assistant. "
               "Let me help with your question.")
-        speak(call_ai("Someone said this to Mehrab: '" + heard + "'. "
-                      "Answer helpfully and politely on his behalf.", use_history=False))
+        speak(call_ai("Someone asked the user: '" + heard + "'. "
+                      "Answer helpfully and politely on the user's behalf.", use_history=False))
         return
     if state["wake"] and not wake:
         return
@@ -482,7 +479,7 @@ def on_heard(heard):
         if not handle(cmd):
             os._exit(0)
     except Exception as e:
-        print("[Makima]: Something went wrong: " + str(e))
+        print("[Bou]: Something went wrong: " + str(e))
 
 
 def _rms(chunk):
@@ -505,14 +502,14 @@ def recognize(audio):
 
 def voice_loop():
     if not (sr and sd):
-        print("[Makima]: Voice input unavailable (install sounddevice and SpeechRecognition). Typing works.")
+        print("[Bou]: Voice input unavailable (install sounddevice and SpeechRecognition). Typing works.")
         return
     RATE, BLOCK = 16000, 1600  # 0.1 s
     try:
         stream = sd.RawInputStream(samplerate=RATE, channels=1, dtype="int16", blocksize=BLOCK)
         stream.start()
     except Exception as e:
-        print("[Makima]: Microphone not available (" + str(e) + "). Typing still works.")
+        print("[Bou]: Microphone not available (" + str(e) + "). Typing still works.")
         return
 
     def flush():
@@ -527,9 +524,9 @@ def voice_loop():
         levels = [_rms(bytes(stream.read(BLOCK)[0])) for _ in range(10)]
         threshold = max(350.0, (sum(levels) / len(levels)) * 2.5)
         if state["wake"]:
-            print("[Makima]: Listening. Say 'Makima' and then your request.")
+            print("[Bou]: Listening. Say 'Bou' and then your request.")
         else:
-            print("[Makima]: Listening. Just talk to me.")
+            print("[Bou]: Listening. Just talk to me.")
         warned = False
         started, frames, preroll, silence, loud = False, [], [], 0, 0
         t0 = time.time()
@@ -544,7 +541,7 @@ def voice_loop():
             if state["speaking"] or time.time() < state["quiet_until"]:
                 if state["speaking"] and state["headphones"] and level > threshold * 1.5:
                     loud += 1
-                    if loud >= 3:           # you started talking over Makima: stop her
+                    if loud >= 3:           # you started talking over Bou: stop her
                         state["stop_speech"] = True
                 else:
                     loud = 0
@@ -571,28 +568,26 @@ def voice_loop():
                     heard = recognize(audio)
                 except sr.RequestError:
                     if not warned:
-                        print("[Makima]: Speech service unreachable. Check your internet.")
+                        print("[Bou]: Speech service unreachable. Check your internet.")
                         warned = True
                     continue
                 warned = False
                 if heard:
                     threading.Thread(target=on_heard, args=(heard,), daemon=True).start()
     except Exception as e:
-        print("[Makima]: Voice loop stopped: " + str(e))
+        print("[Bou]: Voice loop stopped: " + str(e))
 
 
 # ---------------------------------------------------------------- main
 def main():
     global API_KEY
     print("=" * 70)
-    print("  MAKIMA AI ASSISTANT")
-    print("  Creator & Lead Developer: Md Mehrab Hasan")
-    print("  Copyright (C) All rights reserved - Md Mehrab Hasan")
+    print("  BOU AI ASSISTANT")
     print("=" * 70)
 
     API_KEY = load_api_key()
     if not edge_tts:
-        print("[Makima]: Natural voice package (edge-tts) missing, using basic voice.")
+        print("[Bou]: Natural voice package (edge-tts) missing, using basic voice.")
 
     try:
         ans = input("Are you using headphones? (y/n, default n): ").strip().lower()
@@ -600,10 +595,10 @@ def main():
         return
     state["headphones"] = ans.startswith("y")
     if not state["headphones"]:
-        print("[Makima]: Speaker mode: I pause listening while I talk. "
+        print("[Bou]: Speaker mode: I pause listening while I talk. "
               "Use headphones if you want to interrupt me.")
 
-    speak("Hello, I am Makima, developed by Md Mehrab Hasan. Just talk to me, or type help.")
+    speak("Hello, I am Bou. Just talk to me, or type help.")
     threading.Thread(target=voice_loop, daemon=True).start()
 
     while True:
@@ -615,7 +610,7 @@ def main():
             if not handle(cmd):
                 break
         except Exception as e:
-            print("[Makima]: Something went wrong: " + str(e))
+            print("[Bou]: Something went wrong: " + str(e))
 
 
 if __name__ == "__main__":

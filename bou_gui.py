@@ -1,9 +1,7 @@
 # -*- coding: utf-8 -*-
 # ============================================================================
-# MAKIMA AI ASSISTANT - Desktop app (GUI)
-# Creator & Lead Developer : Md Mehrab Hasan
-# Copyright (C) All rights reserved - Md Mehrab Hasan
-# Needs makima.py in the same folder (it is the engine). Uses your OpenRouter key.
+# BOU AI ASSISTANT - Desktop app (GUI)
+# Needs bou_core.py in the same folder. Uses your OpenRouter key.
 # ============================================================================
 
 import os
@@ -19,7 +17,7 @@ import tkinter as tk
 from tkinter import ttk, simpledialog, messagebox
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-import makima as mk
+import bou_core as mk
 
 try:
     import psutil
@@ -49,7 +47,7 @@ FONT = "Segoe UI"
 class App(tk.Tk):
     def __init__(self):
         super().__init__()
-        self.title("Makima AI Assistant - Md Mehrab Hasan")
+        self.title("বউ — AI Assistant")
         self.geometry("1220x740")
         self.minsize(1000, 620)
         self.configure(bg=BG)
@@ -78,8 +76,7 @@ class App(tk.Tk):
         f.pack(side="left", fill="y")
         f.pack_propagate(False)
 
-        tk.Label(f, text="MAKIMA", bg=PANEL, fg=RED, font=(FONT, 20, "bold")).pack(pady=(18, 0))
-        tk.Label(f, text="by Md Mehrab Hasan", bg=PANEL, fg=DIM, font=(FONT, 9)).pack(pady=(0, 14))
+        tk.Label(f, text="BOU", bg=PANEL, fg=RED, font=(FONT, 20, "bold")).pack(pady=(18, 0))
 
         tk.Label(f, text="MODE", bg=PANEL, fg=GOLD, font=(FONT, 9, "bold")).pack(anchor="w", padx=16)
         for key, label in [("chat", "Chat"), ("translator", "Translator"),
@@ -98,7 +95,7 @@ class App(tk.Tk):
         for key, label, init in [
             ("speech_out", "Voice replies", mk.state["speech_out"]),
             ("headphones", "Headphones (interrupt me)", mk.state["headphones"]),
-            ("wake", "Need wake word 'Makima'", mk.state["wake"]),
+            ("wake", "Need wake word 'Bou'", mk.state["wake"]),
             ("meeting_mode", "Meeting mode", mk.state["meeting_mode"]),
         ]:
             v = tk.BooleanVar(value=init)
@@ -117,7 +114,7 @@ class App(tk.Tk):
         cb.bind("<<ComboboxSelected>>", lambda e: mk.state.__setitem__(
             "lang", "bn-BD" if self.lang.get().startswith("Bengali") else "en-US"))
 
-        tk.Label(f, text="Copyright (C) Md Mehrab Hasan\nAll rights reserved", bg=PANEL, fg=DIM,
+        tk.Label(f, text="Personal AI Assistant", bg=PANEL, fg=DIM,
                  font=(FONT, 8), justify="left").pack(side="bottom", anchor="w", padx=16, pady=12)
 
     def build_center(self):
@@ -184,7 +181,7 @@ class App(tk.Tk):
                             font=(FONT, 10), padx=10, pady=8, spacing3=6)
         self.chat.pack(fill="both", expand=True)
         self.chat.tag_config("user", foreground=BLUE)
-        self.chat.tag_config("makima", foreground=GOLD)
+        self.chat.tag_config("bou", foreground=GOLD)
         self.chat.tag_config("who", foreground=DIM, font=(FONT, 8, "bold"))
         self.entry = tk.Entry(chat, bg=PANEL, fg=TXT, insertbackground=TXT, relief="flat",
                               font=(FONT, 11))
@@ -207,14 +204,14 @@ class App(tk.Tk):
     def startup(self):
         key = self.get_key()
         if not key:
-            messagebox.showerror("Makima", "No API key. Closing.")
+            messagebox.showerror("Bou", "No API key. Closing.")
             self.destroy()
             return
         mk.API_KEY = key
         mk.state["headphones"] = self.vars["headphones"].get()
         threading.Thread(target=mk.voice_loop, daemon=True).start()
         threading.Thread(target=mk.speak, args=(
-            "Hello, I am Makima, developed by Md Mehrab Hasan. Just talk to me.",), daemon=True).start()
+            "Hello, I am Bou. Just talk to me.",), daemon=True).start()
 
     def get_key(self):
         key = os.environ.get("OPENROUTER_API_KEY", "").strip()
@@ -226,7 +223,7 @@ class App(tk.Tk):
             if key:
                 return key
         key = simpledialog.askstring(
-            "Makima - OpenRouter API key",
+            "Bou - OpenRouter API key",
             "Paste your OpenRouter API key (Ctrl+V works here).\n"
             "Create one at https://openrouter.ai/keys", parent=self)
         key = (key or "").strip()
@@ -270,12 +267,12 @@ class App(tk.Tk):
                 if not mk.handle(text):
                     self.after(0, self.on_close)
             except Exception as e:
-                self.q.put(("makima", "Something went wrong: " + str(e)))
+                self.q.put(("bou", "Something went wrong: " + str(e)))
         threading.Thread(target=work, daemon=True).start()
 
     def look_screen(self):
         if not mk.pyautogui:
-            self.q.put(("makima", "Screen tools are not installed."))
+            self.q.put(("bou", "Screen tools are not installed."))
             return
         threading.Thread(target=self._look_screen, daemon=True).start()
 
@@ -306,7 +303,7 @@ class App(tk.Tk):
     # ------------------------------------------------------------ updates
     def add_msg(self, role, text):
         self.chat.config(state="normal")
-        self.chat.insert("end", ("YOU\n" if role == "user" else "MAKIMA\n"), "who")
+        self.chat.insert("end", ("YOU\n" if role == "user" else "BOU\n"), "who")
         self.chat.insert("end", text + "\n", role)
         self.chat.see("end")
         self.chat.config(state="disabled")
@@ -321,7 +318,7 @@ class App(tk.Tk):
         try:
             while True:
                 role, payload = self.q.get_nowait()
-                if role in ("user", "makima"):
+                if role in ("user", "bou"):
                     self.add_msg(role, payload)
                 elif role == "vision_txt":
                     self.set_vision_text(payload)
@@ -369,7 +366,7 @@ class App(tk.Tk):
                           width=2 if i == 1 else 1)
         r = base + math.sin(self.phase * 1.3) * (3 + 8 * self.level)
         c.create_oval(cx - r, cy - r, cx + r, cy + r, fill=RED_D, outline=RED, width=3)
-        c.create_text(cx, cy, text="MAKIMA", fill=TXT, font=(FONT, max(14, int(base * 0.28)), "bold"))
+        c.create_text(cx, cy, text="BOU", fill=TXT, font=(FONT, max(14, int(base * 0.28)), "bold"))
         self.after(33, self.animate)
 
 

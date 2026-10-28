@@ -1,7 +1,7 @@
 # Bou (বউ) 1.1 — validation and scope
 
 Date: 2026-10-28
-Target: existing Windows Makima Python 3.11 environment.
+Target: existing Windows Bou Python 3.11 environment.
 
 Implemented:
 - Original dark/cyan Tk desktop UI, sidebar, animated orb and 5 functional pages.

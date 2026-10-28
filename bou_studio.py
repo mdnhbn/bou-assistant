@@ -1,12 +1,11 @@
 # -*- coding: utf-8 -*-
-"""Bou (বউ): an original desktop interface for the user's existing Makima engine.
-The original engine attribution remains Md Mehrab Hasan. UI extension: 2026.
-"""
+"""Bou (বউ): personal desktop AI assistant."""
 import os,sys,json,math,time,uuid,queue,threading,logging,webbrowser,xml.etree.ElementTree as ET
 from urllib.request import Request,urlopen
 from pathlib import Path
 import tkinter as tk
 from tkinter import ttk,messagebox,filedialog
+import bou_core as mk
 from studio_store import Store,DEFAULT_MANAGER,DEFAULT_WORKERS
 from studio_engine import Engine
 try:
@@ -38,7 +37,7 @@ def entry(parent):
 class App(tk.Tk):
     def __init__(self,store=None,engine=None):
         super().__init__()
-        self.title("বউ — AI Assistant 1.7.0")
+        self.title("বউ — AI Assistant 1.8.0")
         self.geometry("1600x920+40+40")
         self.minsize(1180,760)
         try:self.state("zoomed")
@@ -1077,7 +1076,7 @@ class App(tk.Tk):
         def worker():
             items=[]
             try:
-                request=Request("https://feeds.bbci.co.uk/news/world/rss.xml",headers={"User-Agent":"BouAssistant/1.7.0 (public RSS headlines)"})
+                request=Request("https://feeds.bbci.co.uk/news/world/rss.xml",headers={"User-Agent":"BouAssistant/1.8.0 (public RSS headlines)"})
                 with urlopen(request,timeout=8) as response:raw=response.read(1_500_000)
                 root=ET.fromstring(raw)
                 for item in root.findall("./channel/item")[:5]:

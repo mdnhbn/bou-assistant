@@ -1,4 +1,4 @@
-# Bou AI Assistant 1.7.0
+# Bou AI Assistant 1.8.0
 
 Bou হলো Windows desktop AI assistant, সঙ্গে conversation memory, Manager ও Worker দল, এবং বিক্রির জন্য ব্যবহারকারীভিত্তিক hosted service। Assistant-এর source, service, admin panel ও changelog এই repository-তে রাখা হয়।
 
@@ -42,7 +42,7 @@ Hosted mode-এ agent, key ও model-এর প্রশাসনিক সে�
 
 ## Conversation memory ও গোপনীয়তা
 
-সম্পূর্ণ chat archive এই PC-তে `%LOCALAPPDATA%\\MakimaStudio\\studio.sqlite3`-এ থাকে। AI-কে প্রতিটি request-এ পুরো archive পাঠানো হয় না: `Use conversation memory in AI chats` চালু থাকলে সাম্প্রতিক ও প্রাসঙ্গিক অংশ পাঠানো হয়। Saved notes পাঠাতে আলাদা করে `Use saved notes` চালু করতে হয়। `Memory` পেজ থেকে chat history ও note নিয়ন্ত্রণ করুন।
+সম্পূর্ণ chat archive এই PC-তে `%LOCALAPPDATA%\\BouStudio\\studio.sqlite3`-এ থাকে। AI-কে প্রতিটি request-এ পুরো archive পাঠানো হয় না: `Use conversation memory in AI chats` চালু থাকলে সাম্প্রতিক ও প্রাসঙ্গিক অংশ পাঠানো হয়। Saved notes পাঠাতে আলাদা করে `Use saved notes` চালু করতে হয়। `Memory` পেজ থেকে chat history ও note নিয়ন্ত্রণ করুন।
 
 Hosted service chat transcript নিজে থেকে সংরক্ষণ করে না। তবে যে prompt, নির্বাচিত ছবি এবং settings-এ অনুমোদিত history/notes পাঠানো হয়, তা configured AI provider-এ যায়। Provider-এর নিজস্ব data retention তাদের নীতির ওপর নির্ভর করে। Local mode-এ provider key `key.txt`-এ থাকে; সেটি Git-এ যোগ করা হয় না।
 
@@ -69,6 +69,12 @@ Bou 1.6.0-তে একবারের camera description এবং অনুম
 মূল desktop assistant এবং নতুন Bou interface-এর source, service code, Docker configuration, admin UI ও প্রয়োজনীয় image এই repository-তে রাখা হয়। Secret key, `.env`, Python virtual environment, local database ও generated install flags `.gitignore` দিয়ে বাদ দেওয়া হয়। প্রতিটি release-এ সংস্করণ বাড়িয়ে এই README-এর Changelog-এ কী বদলেছে তা লিখুন।
 
 ## Changelog
+
+### 1.8.0 — Bou নাম ও পরিচ্ছন্ন branding
+
+- Legacy assistant-এর নাম ও source ফাইলের নাম Bou-তে বদলানো হয়েছে; developer attribution সরানো হয়েছে।
+- Personal name না থাকলে assistant আর কোনো developer/owner name বানিয়ে বলে না। Meeting mode-এর user name ঐচ্ছিক `BOU_USER_NAME` environment variable দিয়ে সেট করা যায়।
+- Local chat database BouStudio folder-এ সরানো হয়েছে; আগের archive রাখা হয়েছে।
 
 ### 1.7.0 — Live voice conversation ও Wispr Flow API
 

@@ -2,7 +2,7 @@
 chcp 65001 >nul
 set PYTHONUTF8=1
 set PYTHONIOENCODING=utf-8
-title Makima AI Assistant
+title Bou AI Assistant
 cd /d "%~dp0"
 
 where python >nul 2>&1
@@ -24,16 +24,16 @@ if not exist ".installed4" (
     echo done> .installed4
 )
 
-if not exist "makima.py" (
-    echo ERROR: makima.py was not found in this folder.
+if not exist "bou_core.py" (
+    echo ERROR: bou_core.py was not found in this folder.
     goto fail
 )
-if not exist "makima_gui.py" (
-    echo ERROR: makima_gui.py was not found in this folder.
+if not exist "bou_gui.py" (
+    echo ERROR: bou_gui.py was not found in this folder.
     goto fail
 )
 
-python makima_gui.py
+python bou_gui.py
 if errorlevel 1 goto fail
 exit /b 0
 

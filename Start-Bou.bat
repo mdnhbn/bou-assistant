@@ -4,13 +4,13 @@ title Bou - AI Assistant
 cd /d "%~dp0"
 set PYTHONUTF8=1
 set PYTHONDONTWRITEBYTECODE=1
-if not exist "makima.py" (
+if not exist "bou_core.py" (
   echo Place these update files inside your existing Ai assistent folder.
   pause
   exit /b 1
 )
 if not exist ".venv\Scripts\python.exe" (
-  echo First run your original makima.bat to set up its Python environment.
+  echo First run Bou-Assistant.bat to set up its Python environment.
   pause
   exit /b 1
 )
@@ -28,5 +28,5 @@ if errorlevel 1 (
   ".venv\Scripts\python.exe" -m pip install keyring
   if errorlevel 1 echo Secure key storage is unavailable; keys can still be used for this session.
 )
-".venv\Scripts\python.exe" -B makima_studio.py
+".venv\Scripts\python.exe" -B bou_studio.py
 if errorlevel 1 pause

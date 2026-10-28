@@ -1,4 +1,4 @@
-# Bou AI Assistant · 1.7.0
+# Bou AI Assistant · 1.8.0
 
 Bou is a Windows desktop assistant with local conversation memory and an optional hosted service. Provider API keys stay on the service server; customers connect with individual access tokens.
 
@@ -6,7 +6,8 @@ Bou is a Windows desktop assistant with local conversation memory and an optiona
 
 ## Components
 
-- `makima_studio.py`: Bou desktop interface.
+- `bou_studio.py`: Bou desktop interface.
+- `bou_core.py` and `bou_gui.py`: Bou voice engine and the simpler standalone interface.
 - `studio_engine.py` and `studio_store.py`: local assistant, worker manager, memory, and hosted-service client.
 - `service/`: FastAPI service and owner admin panel.
 - `service/static/admin.html`: configure agent roles and key pairs, create or revoke customer accounts.
@@ -49,6 +50,12 @@ Wispr Flow Voice Interface API is the default transcription provider. It require
 PC control is off by default and enabled only for the current session. Before every AI planning call, Bou shows the screenshot and asks before sharing it with the configured provider. It then displays one proposed click, key, scroll, or text entry and waits for approval. After executing at most that one action, it stops until the user requests another screenshot. Screenshots and PC-task details are not added to the conversation archive. Passwords, one-time codes, payments, purchases, sending/publishing, deletions, installs, agreements, and security-setting changes are blocked for the user to handle directly.
 
 ## Changelog
+
+### 1.8.0 — Bou identity cleanup
+
+- Renamed the legacy assistant's source files and branding to Bou and removed developer attribution.
+- Bou no longer invents a developer or owner name when asked; an optional user name can be configured with `BOU_USER_NAME` for meeting mode.
+- Moved the local chat archive to the BouStudio data folder without discarding the existing archive.
 
 ### 1.7.0 — Live voice conversation and Wispr Flow API
 
