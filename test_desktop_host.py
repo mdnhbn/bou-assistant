@@ -70,7 +70,7 @@ class DesktopHostTests(unittest.TestCase):
         keyring = types.SimpleNamespace(get_password=lambda *_args: "")
         store = types.SimpleNamespace(Store=FakeStore)
         with patch.dict(os.environ, {"GEMINI_API_KEY": ""}), patch.dict("sys.modules", {"keyring": keyring, "studio_store": store}):
-            self.runtime = DesktopRuntime(static_root=static, data_root=self.root / "data")
+            self.runtime = DesktopRuntime(static_root=static, data_root=self.root / "alias" / ".." / "data")
         self.addCleanup(self.runtime.close)
         self.runtime.start(port=0)
         self.port = self.runtime.server.server_port
@@ -114,6 +114,7 @@ class DesktopHostTests(unittest.TestCase):
         self.assertEqual(self.request("POST", "/api/chat", self.payload("hello"))[0], 403)
 
     def test_static_traversal_is_rejected_and_model_override_is_bounded(self):
+        self.assertEqual(self.runtime.data_root, (self.root / "data").resolve())
         for path in ("/../secret.txt", "/%2e%2e/secret.txt", "/%2e%2e%2fsecret.txt"):
             with self.subTest(path=path):
                 self.assertEqual(self.request("GET", path, authenticated=True)[0], 404)

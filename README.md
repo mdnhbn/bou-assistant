@@ -1,4 +1,4 @@
-# Bou AI Assistant · 1.11.0
+# Bou AI Assistant · 1.11.1
 
 Bou opens its React character interface in a native Windows window. The installer bundles the UI, Python, voice packages, offline Whisper model and Microsoft's offline WebView2 runtime installer. End users do not need Node.js, npm or a separate Python installation. The older dashboard remains available through **Classic tools** for its local archive, worker team, camera/PC controls and optional hosted service.
 
@@ -83,6 +83,11 @@ Local Whisper is the default transcription provider. The first live-listening st
 PC control is off by default and enabled only for the current session. Before every AI planning call, Bou shows the screenshot and asks before sharing it with the configured provider. It then displays one proposed click, key, scroll, or text entry and waits for approval. After executing at most that one action, it stops until the user requests another screenshot. Screenshots and PC-task details are not added to the conversation archive. Passwords, one-time codes, payments, purchases, sending/publishing, deletions, installs, agreements, and security-setting changes are blocked for the user to handle directly.
 
 ## Changelog
+
+### 1.11.1 — Windows model-folder path fix
+
+- Canonicalized the per-user data/model folder so Windows short-name aliases do not reject valid portrait files. Added regression coverage using an unnormalized directory.
+- The 1.11.0 installer workflow stopped at that path test; use the 1.11.1 build for the same supplied interface and native features. Usage is unchanged.
 
 ### 1.11.0 — React Windows desktop installer and native voice
 

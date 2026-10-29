@@ -1,6 +1,6 @@
 export const APP_NAME = "Bou";
-export const APP_VERSION = "1.11.0";
-export const WEB_VERSION = "0.4.0";
+export const APP_VERSION = "1.11.1";
+export const WEB_VERSION = "0.4.1";
 
 export type CharacterId = "bou" | "aether";
 export type DisplayMode = "3d" | "2d";

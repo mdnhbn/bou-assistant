@@ -16,7 +16,7 @@ from pathlib import Path
 from urllib.parse import unquote, urlsplit
 
 ROOT = Path(getattr(sys, "_MEIPASS", Path(__file__).resolve().parent))
-VERSION = (ROOT / "VERSION").read_text(encoding="utf-8").strip() if (ROOT / "VERSION").is_file() else "1.11.0"
+VERSION = (ROOT / "VERSION").read_text(encoding="utf-8").strip() if (ROOT / "VERSION").is_file() else "1.11.1"
 LANGUAGES = {"bn": "Bengali", "en": "English", "ar": "Arabic", "hi": "Hindi", "ur": "Urdu"}
 CHARACTERS = {"bou", "aether"}
 TTS_VOICES = {
@@ -67,7 +67,7 @@ def local_reply(text: str) -> str | None:
 class DesktopRuntime:
     def __init__(self, static_root: Path | None = None, data_root: Path | None = None):
         self.static_root = (static_root or ROOT / "web" / "dist").resolve()
-        self.data_root = data_root or app_data()
+        self.data_root = (data_root or app_data()).resolve()
         self.character_root = self.data_root / "models" / "characters"
         self.character_root.mkdir(parents=True, exist_ok=True)
         self.model = os.environ.get("GEMINI_MODEL", "gemini-3.8-flash")
@@ -395,7 +395,7 @@ def make_handler(runtime: DesktopRuntime):
             if path in {f"/models/{character}.{extension}" for character in CHARACTERS for extension in ("png", "vrm")}:
                 external = runtime.character_root / Path(path).name
                 if external.is_file() and not external.is_symlink():
-                    asset, root = external, runtime.character_root.resolve()
+                    asset, root = external.resolve(), runtime.character_root.resolve()
             if not asset.is_relative_to(root) or not asset.is_file():
                 self._json(404, {"error": "not_found"})
                 return

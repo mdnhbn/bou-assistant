@@ -1,6 +1,8 @@
-# Bou 1.11.0 — validation and scope
+# Bou 1.11.1 — validation and scope
 
 Date: 2026-10-29. Windows x64 build, Python 3.11, React interface imported from the user's `bou-ai-interface.zip`.
+
+Patch 1.11.1 normalizes model/data paths before comparison. The added non-canonical-path regression passes with all 12 native/language checks; the 1.11.0 GitHub run exposed this Windows short-path case before its release asset was published.
 
 Verified in this update:
 - Strict TypeScript and Vite production build passes with the supplied cockpit UI and bundled Bou/Aether PNG portraits.

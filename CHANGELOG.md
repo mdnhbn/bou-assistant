@@ -2,6 +2,13 @@
 
 Every GitHub update must increment the serial version in `VERSION`, keep the app/installer/service version metadata aligned, and add a newest-first entry here and in `README-BN.md`. Each entry records features, how to use them, known limits, and bug fixes (or explicitly says when none were reported). Pushing a `vX.Y.Z` tag triggers the Windows installer workflow.
 
+## 1.11.1 — 2026-10-29
+
+- **Fixed:** canonicalize the per-user data/model directory before comparing asset paths. Windows short-name folder aliases on the GitHub runner caused valid local portraits to return 404 in 1.11.0.
+- **Validation:** path-normalization regression coverage now exercises a non-canonical input directory together with the existing model override and traversal checks.
+- **Use:** install 1.11.1 for the supplied cockpit UI. Character file locations and controls are the same as 1.11.0.
+- **Release note:** 1.11.0 source/tag was pushed, but its installer workflow stopped at the failed path test; 1.11.1 replaces that build attempt.
+
 ## 1.11.0 — 2026-10-29
 
 ### Added

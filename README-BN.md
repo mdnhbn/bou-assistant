@@ -1,4 +1,4 @@
-# Bou AI Assistant 1.11.0
+# Bou AI Assistant 1.11.1
 
 Bou এখন React character interface-সহ native Windows window-তে খুলবে। Installer-এর মধ্যে built UI, Python, voice package, offline Whisper model এবং Microsoft-এর offline WebView2 installer থাকে; ব্যবহারকারীর আলাদা Node.js/npm/Python লাগবে না। আগের archive, Manager/Worker, camera ও PC-control screen **Classic tools** থেকে খোলা যাবে।
 
@@ -87,6 +87,11 @@ Bou 1.6.0-তে একবারের camera description এবং অনুম
 মূল desktop assistant, web companion, service, installer ও প্রয়োজনীয় image এই repository-তে আছে। Secret key, `.env`, virtual environment এবং local database Git-এ যোগ হয় না। প্রতিটি GitHub update-এর আগে `VERSION` বাড়ান, installer ও service metadata মিলিয়ে দিন, এবং `CHANGELOG.md` ও এই README-তে serial অনুযায়ী নতুন version-এর feature, ব্যবহারবিধি ও bug-fix লিখুন। Release tag দিলে GitHub Actions নতুন Windows installer বানায়।
 
 ## Changelog
+
+### 1.11.1 — Windows model folder path fix
+
+- Windows-এর short folder alias থাকলে valid user portrait 404 দেখাত। Data/model path canonical করে সমস্যাটি ঠিক হয়েছে; regression check যুক্ত হয়েছে।
+- 1.11.0-এর installer workflow ওই test-এ থেমেছিল। একই supplied interface ও native feature-এর জন্য 1.11.1 ব্যবহার করুন; চালানোর ধাপ বদলায়নি।
 
 ### 1.11.0 — React Windows installer ও native voice
 
