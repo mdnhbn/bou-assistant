@@ -1,4 +1,4 @@
-# Bou AI Assistant 1.10.0
+# Bou AI Assistant 1.10.1
 
 Bou হলো Windows desktop AI assistant, সঙ্গে conversation memory, Manager ও Worker দল, এবং বিক্রির জন্য ব্যবহারকারীভিত্তিক hosted service। Assistant-এর source, service, admin panel ও changelog এই repository-তে রাখা হয়।
 
@@ -80,6 +80,15 @@ Bou 1.6.0-তে একবারের camera description এবং অনুম
 
 ## Changelog
 
+### 1.10.1 — dependency scan ও নির্বাচিত install
+
+- Setup চালু হলে Windows version ও architecture, CPU, RAM, destination drive-এর free space, microphone input count এবং Bou install folder-এর dependency/model files scan করে। Setup microphone থেকে audio নেয় না; unrelated personal files বা অন্য installed apps-এর তালিকা করে না।
+- Python, voice runtime এবং প্রয়োজনীয় app modules private app folder-এ bundle থাকে; system-এর Python/package বদলায় না। Existing folder-এ runtime, voice data, Whisper model ও OpenCV আছে কি না আলাদা করে দেখায়।
+- নতুন PC-তে missing Whisper/OpenCV components default-এ selected থাকে; user চাইলে optional Whisper model বা camera support uncheck করতে পারেন। Model বাদ দিলে প্রথম voice use-এ internet থেকে model আনতে হবে; camera support বাদ দিলে camera feature বন্ধ থাকবে।
+- Existing files পেলে replacement confirmation আসে। `Yes` changed files update করে; `No` existing files রেখে শুধু missing files যোগ করে। Identical file content সবসময় reuse/skip হয়।
+- **Bug fix:** installer আগের version-এ existing Bou folder-এর files সবসময় overwrite করত। এখন system requirements দেখায়, identical dependencies skip করে, এবং update/replace user-এর পছন্দ অনুযায়ী হয়।
+
+**ব্যবহার:** setup-এ destination বাছাই করে `Scan PC` চাপুন, scan report দেখে Whisper/OpenCV checkbox ঠিক করুন, replacement প্রশ্নে update করতে চাইলে `Yes` দিন, তারপর `Install selected` চাপুন।
 ### 1.10.0 — Windows voice welcome ও key-free প্রথম উত্তর
 
 - App চালু হলে ডিফল্টে শোনা শুরু করার আগে বলে: “হ্যালো, welcome! আমার নাম নাজমুল। নাজমুল, কেমন আছো?”; fresh install-এ spoken greeting ও microphone auto-start দুটোই চালু থাকে। Settings-এর `Mic` button দিয়ে pause/resume করা যায়।
@@ -105,7 +114,7 @@ Bou 1.6.0-তে একবারের camera description এবং অনুম
 - স্বাভাবিক Bengali-first কথা বলা, এবং Bou-র বাস্তব tool/approval সীমা ঠিকভাবে বোঝানোর persistent assistant instructions যোগ হয়েছে।
 - Camera feature-এর dependency OpenCV desktop dependency bundle-এ যোগ হয়েছে।
 
-Windows installer-এর সর্বশেষ `.exe` [GitHub Releases](https://github.com/mdnhbn/bou-assistant/releases/latest) থেকে নামানো যাবে। Installer-এ কোনো OpenRouter key, chat archive বা user database থাকে না। Install-এর পর Settings-এ নিজের key দিন; Bou Windows Credential Manager-এ key সংরক্ষণ করে। Installer code-signed নয়।
+Windows installer-এর `.exe` [GitHub Releases](https://github.com/mdnhbn/bou-assistant/releases/latest) থেকে নামান। চালু হলে setup Windows version/architecture, CPU, RAM, target disk space, microphone device count এবং Bou install folder scan করে; microphone audio নেয় না এবং unrelated app/personal file inventory করে না। System Python বা global package বদলায় না—runtime Bou-র নিজের install folder-এ থাকে। Existing component দেখায়, identical file skip করে, নতুন file যোগ করে; changed file replace করার আগে জিজ্ঞাসা করে। Whisper/OpenCV checkbox থেকে optional model/camera বাদ দেওয়া যায়। Installer-এ API key, chat archive বা user database থাকে না। Install-এর পর Settings-এ নিজের key দিন; Bou Windows Credential Manager-এ key সংরক্ষণ করে। Installer code-signed নয়।
 
 ChatGPT-এর private model, skills, browser session বা account permission সরাসরি Bou-র memory-তে কপি করা যায় না। Bou-র নিজস্ব live voice, অনুমতি-নেওয়া একবারের camera description এবং এক ধাপ করে PC control আছে; unrestricted browser বা PC access নেই।
 

@@ -9,6 +9,7 @@ credentials.json
 
 # Python environments and generated files
 .venv/
+.venv-release/
 venv/
 env/
 __pycache__/

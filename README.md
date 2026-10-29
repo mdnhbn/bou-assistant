@@ -1,4 +1,4 @@
-# Bou AI Assistant · 1.10.0
+# Bou AI Assistant · 1.10.1
 
 Bou is a Windows desktop assistant with local conversation memory and an optional hosted service. Provider API keys stay on the service server; customers connect with individual access tokens.
 
@@ -53,7 +53,7 @@ On first run, `Start-Bou.bat` creates `.venv` when needed and installs the assis
 
 ## Windows installer
 
-The GitHub Actions Windows workflow builds a single x64 setup `.exe` for tagged releases. It bundles Python and application dependencies, OpenCV, and the offline Whisper small model, then installs Bou and creates Start Menu and desktop shortcuts. Download the latest installer from [GitHub Releases](https://github.com/mdnhbn/bou-assistant/releases/latest). The installer does not contain an OpenRouter key, user data, or chat database. Enter your own API key in Settings after installation; Bou stores it in Windows Credential Manager. The source launcher downloads the Whisper model on first use, while the installer includes it for offline speech recognition. The installer is not code-signed.
+The Windows x64 setup `.exe` bundles Python and application dependencies, OpenCV, and the offline Whisper model. Before installation it checks Windows/architecture, CPU, RAM, target disk space, microphone presence, and Bou files in the selected folder. It then shows which components are present; identical files are reused, missing files are installed, and changed files are replaced only after confirmation. The runtime stays private to Bou and does not overwrite global Python packages. Download the latest installer from [GitHub Releases](https://github.com/mdnhbn/bou-assistant/releases/latest). The installer does not contain an OpenRouter key, user data, or chat database. Enter your own API key in Settings after installation; Bou stores it in Windows Credential Manager. The source launcher downloads the Whisper model on first use, while the installer includes it for offline speech recognition. The installer is not code-signed.
 
 Bou's memory includes conversational preferences and user-approved local notes. ChatGPT's private model, skills, browser session, and account permissions cannot be copied into Bou. Bou only uses its own connected features: live voice, one-shot approved camera descriptions, and one-step-at-a-time PC control. It does not have unrestricted browser or PC access.
 
@@ -69,6 +69,15 @@ PC control is off by default and enabled only for the current session. Before ev
 
 ## Changelog
 
+### 1.10.1 — dependency scan and selective install
+
+- Setup scans Windows version/architecture, CPU, RAM, destination disk space, microphone device count, and Bou dependency/model files in the chosen install folder. It does not capture microphone audio, inspect personal files, or inventory unrelated applications.
+- Python, voice runtime and required modules remain bundled in Bou private install folder; global Python packages are not changed. Existing runtime, voice data, Whisper model and OpenCV are reported separately.
+- Missing Whisper and OpenCV components are selected by default on a new PC. You may uncheck the optional Whisper model (first voice use then downloads it) or camera support (camera features stay unavailable).
+- If existing files are found, the installer asks whether to replace changed files. `Yes` updates them; `No` preserves them and installs only missing files. Byte-identical files are always reused.
+- **Bug fix:** updates previously overwrote all existing Bou files. The installer now reports requirements, skips identical files, and follows the user replace choice.
+
+**How to use:** choose the destination, click `Scan PC`, review the report and component checkboxes, choose whether to replace existing files, then click `Install selected`.
 ### 1.10.0 — Windows voice welcome and key-free first reply
 
 - Bou now opens with the requested spoken Bengali greeting: “হ্যালো, welcome! আমার নাম নাজমুল। নাজমুল, কেমন আছো?” Fresh installs have spoken greeting and microphone auto-start enabled by default; use **Mic** to pause or resume.
