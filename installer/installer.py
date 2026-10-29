@@ -10,7 +10,7 @@ from pathlib import Path
 import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
 
-VERSION = "1.9.1"
+VERSION = "1.10.0"
 APP_NAME = "Bou AI Assistant"
 UNINSTALL_KEY = r"Software\Microsoft\Windows\CurrentVersion\Uninstall\BouAIAssistant"
 
@@ -43,7 +43,7 @@ class Installer(tk.Tk):
 
         tk.Label(self, text=APP_NAME, bg="#101827", fg="#f3f5f8",
                  font=("Segoe UI", 20, "bold")).pack(anchor="w", padx=24, pady=(22, 4))
-        tk.Label(self, text="Installs Bou, its voice and camera modules, and the offline Whisper model.",
+        tk.Label(self, text="Includes Bou, Python, voice and camera dependencies, and offline Whisper.",
                  bg="#101827", fg="#c2c9d4", font=("Segoe UI", 10)).pack(anchor="w", padx=24)
 
         row = tk.Frame(self, bg="#101827")

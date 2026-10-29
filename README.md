@@ -1,8 +1,8 @@
-# Bou AI Assistant · 1.9.1
+# Bou AI Assistant · 1.10.0
 
 Bou is a Windows desktop assistant with local conversation memory and an optional hosted service. Provider API keys stay on the service server; customers connect with individual access tokens.
 
-বাংলায় ব্যবহারবিধি: [README-BN.md](README-BN.md)
+বাংলায় ব্যবহারবিধি: [README-BN.md](README-BN.md) · Version history: [CHANGELOG.md](CHANGELOG.md)
 
 ## Components
 
@@ -61,13 +61,25 @@ Bou's memory includes conversational preferences and user-approved local notes. 
 
 The Camera & PC page keeps camera access off until the user clicks **Capture one frame** and confirms. Bou captures one still, turns the camera off, previews the image, and sends it to the configured provider only after a second approval. The camera prompt asks for visible, non-sensitive details and does not identify the person. The image stays in memory and is not written to disk.
 
-Bou speaks a welcome when it opens, then starts a live microphone session by default if enabled in Settings. Speak naturally; when a phrase ends, Bou transcribes it, displays the words in chat, sends the text to the configured AI provider, and speaks the answer. The **Mic** button pauses or resumes listening. Raw microphone audio is not saved by Bou.
+On fresh installs, Bou speaks “হ্যালো, welcome! আমার নাম নাজমুল। নাজমুল, কেমন আছো?” and then starts the live microphone session by default if enabled in Settings. Speak naturally; when a phrase ends, Bou transcribes it, displays the words in chat, sends the text to the configured AI provider, and speaks the answer. The **Mic** button pauses or resumes listening. Raw microphone audio is not saved by Bou.
 
 Local Whisper is the default transcription provider. The first live-listening startup downloads the multilingual `small` model (about 500 MB) into `%LOCALAPPDATA%\BouStudio\models\whisper`; later transcription runs on the PC without sending microphone audio to a speech service. Bou sends the recognized text to the configured AI provider to generate a reply. Wispr Flow and Google Speech Recognition remain optional cloud transcription providers and are clearly labeled in Settings.
 
 PC control is off by default and enabled only for the current session. Before every AI planning call, Bou shows the screenshot and asks before sharing it with the configured provider. It then displays one proposed click, key, scroll, or text entry and waits for approval. After executing at most that one action, it stops until the user requests another screenshot. Screenshots and PC-task details are not added to the conversation archive. Passwords, one-time codes, payments, purchases, sending/publishing, deletions, installs, agreements, and security-setting changes are blocked for the user to handle directly.
 
 ## Changelog
+
+### 1.10.0 — Windows voice welcome and key-free first reply
+
+- Bou now opens with the requested spoken Bengali greeting: “হ্যালো, welcome! আমার নাম নাজমুল। নাজমুল, কেমন আছো?” Fresh installs have spoken greeting and microphone auto-start enabled by default; use **Mic** to pause or resume.
+- “আমি ভালো আছি” / “আমি ভাল আছি” gets an immediate spoken local reply without an OpenRouter key. “I am good” and “I am fine” have a short local reply too. Add your own OpenRouter key in Settings for general AI conversations.
+- Set `BOU_USER_NAME` to change the name used in subsequent AI conversation prompts (default `Nazmul`). The startup greeting currently uses the requested fixed name.
+- The self-contained installer includes the Python runtime, voice/camera dependencies, and offline Whisper small model. No separate Python or dependency installation is needed on Windows x64. API keys are never bundled.
+- **Bug fix:** the first wellbeing reply used to fail when no provider key was configured; it now completes locally. App title, installer and service metadata now agree on version 1.10.0.
+
+**How to use:** Download and run `Bou-AI-Assistant-Setup.exe` from GitHub Releases, keep **Launch Bou after installation** selected, allow microphone access in Windows, hear the greeting, then say “আমি ভালো আছি.” Add an OpenRouter key in Settings for other AI requests. Local Whisper transcribes microphone audio on this PC; recognized transcript text is sent to the configured AI provider.
+
+**Limits:** Tagged releases currently produce a Windows x64 installer only. This version does not provide macOS, Linux or Android installers. The greeting and wellbeing reply work locally; other AI replies require an internet connection and your OpenRouter key or hosted service access.
 
 ### 1.9.1 — Self-contained Windows setup
 

@@ -37,7 +37,7 @@ def entry(parent):
 class App(tk.Tk):
     def __init__(self,store=None,engine=None):
         super().__init__()
-        self.title("বউ — AI Assistant 1.9.1")
+        self.title("বউ — AI Assistant 1.10.0")
         self.geometry("1600x920+40+40")
         self.minsize(1180,760)
         try:self.state("zoomed")
@@ -833,7 +833,8 @@ class App(tk.Tk):
         self.voice_busy=True; self.voice_pause.set()
         self.set_phase("Welcome","Bou is starting your voice session.")
         def greet():
-            try:self.engine.speak("Welcome to Bou. কেমন আছেন?"); self.events.put(("welcome_done",None))
+            # TODO: Replace this fixed intro with the user profile greeting setting.
+            try:self.engine.speak("হ্যালো, welcome! আমার নাম নাজমুল। নাজমুল, কেমন আছো?"); self.events.put(("welcome_done",None))
             except Exception as exc:self.events.put(("welcome_error",str(exc)[:120]))
         threading.Thread(target=greet,daemon=True).start()
     def start_voice_session(self):
@@ -1111,7 +1112,7 @@ class App(tk.Tk):
         def worker():
             items=[]
             try:
-                request=Request("https://feeds.bbci.co.uk/news/world/rss.xml",headers={"User-Agent":"BouAssistant/1.9.1 (public RSS headlines)"})
+                request=Request("https://feeds.bbci.co.uk/news/world/rss.xml",headers={"User-Agent":"BouAssistant/1.10.0 (public RSS headlines)"})
                 with urlopen(request,timeout=8) as response:raw=response.read(1_500_000)
                 root=ET.fromstring(raw)
                 for item in root.findall("./channel/item")[:5]:

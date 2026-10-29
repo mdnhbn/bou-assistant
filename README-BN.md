@@ -1,4 +1,4 @@
-# Bou AI Assistant 1.9.1
+# Bou AI Assistant 1.10.0
 
 Bou হলো Windows desktop AI assistant, সঙ্গে conversation memory, Manager ও Worker দল, এবং বিক্রির জন্য ব্যবহারকারীভিত্তিক hosted service। Assistant-এর source, service, admin panel ও changelog এই repository-তে রাখা হয়।
 
@@ -76,9 +76,21 @@ Bou 1.6.0-তে একবারের camera description এবং অনুম
 
 ## Source ও সংস্করণ
 
-মূল desktop assistant এবং নতুন Bou interface-এর source, service code, Docker configuration, admin UI ও প্রয়োজনীয় image এই repository-তে রাখা হয়। Secret key, `.env`, Python virtual environment, local database ও generated install flags `.gitignore` দিয়ে বাদ দেওয়া হয়। প্রতিটি release-এ সংস্করণ বাড়িয়ে এই README-এর Changelog-এ কী বদলেছে তা লিখুন।
+মূল desktop assistant, web companion, service, installer ও প্রয়োজনীয় image এই repository-তে আছে। Secret key, `.env`, virtual environment এবং local database Git-এ যোগ হয় না। প্রতিটি GitHub update-এর আগে `VERSION` বাড়ান, installer ও service metadata মিলিয়ে দিন, এবং `CHANGELOG.md` ও এই README-তে serial অনুযায়ী নতুন version-এর feature, ব্যবহারবিধি ও bug-fix লিখুন। Release tag দিলে GitHub Actions নতুন Windows installer বানায়।
 
 ## Changelog
+
+### 1.10.0 — Windows voice welcome ও key-free প্রথম উত্তর
+
+- App চালু হলে ডিফল্টে শোনা শুরু করার আগে বলে: “হ্যালো, welcome! আমার নাম নাজমুল। নাজমুল, কেমন আছো?”; fresh install-এ spoken greeting ও microphone auto-start দুটোই চালু থাকে। Settings-এর `Mic` button দিয়ে pause/resume করা যায়।
+- “আমি ভালো আছি” বা “আমি ভাল আছি” বললে OpenRouter key ছাড়াই Bou বাংলায় মুখে উত্তর দেয়। ইংরেজি “I am good”/“I am fine”-এরও ছোট local reply আছে। AI-র সঙ্গে অন্য কথোপকথনের জন্য নিজের OpenRouter key Settings-এ দিতে হবে।
+- `BOU_USER_NAME` environment variable দিয়ে পরের AI কথোপকথনে ব্যবহারকারীর নাম বদলানো যায়; default `Nazmul`। Startup greeting-এ আপাতত নির্দিষ্ট নাজমুল নামটি ব্যবহৃত হয়।
+- Installer-এর ভেতরে Python runtime, voice/camera package এবং offline Whisper small model থাকে। Install-এর পরে আলাদা Python বা dependency setup ছাড়াই Windows x64-এ Bou চালু করা যায়। কোনো API key installer-এ থাকে না।
+- **Bug fix:** key না থাকলে প্রথম wellbeing response-টি AI provider-এ পাঠিয়ে error দেখাত; এখন এটি local-এ সম্পন্ন হয়। App title, installer ও service version-ও 1.10.0-তে মিলেছে।
+
+**ব্যবহার:** GitHub Releases থেকে `Bou-AI-Assistant-Setup.exe` নামিয়ে চালান, installer-এর `Launch Bou after installation` নির্বাচন রাখুন, Windows-এ microphone access দিন, greeting শুনুন এবং “আমি ভালো আছি” বলুন। পরের সাধারণ AI প্রশ্নের জন্য Settings-এ OpenRouter key যোগ করুন। Local Whisper microphone audio এই PC-তেই transcribe করে; provider-এ transcript text পাঠানো হয়।
+
+**সীমা:** tagged release-এ বর্তমানে Windows x64 installer তৈরি হয়। macOS, Linux বা Android-এর installer এই version-এ নেই। প্রথম অভিবাদন ও wellbeing উত্তর local; অন্য AI উত্তরের জন্য internet connection এবং নিজের OpenRouter key/service access দরকার।
 
 ### 1.9.1 — self-contained Windows setup
 

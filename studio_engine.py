@@ -74,6 +74,17 @@ class Engine:
             mk.state["lang"]=settings["language"]
             low=text.strip().lower()
             if kind=="chat" and settings["mode"]=="chat":
+                # Keep the requested welcome exchange usable without requiring an AI key.
+                normalized=low.strip(" .,!?।;:")
+                bengali_wellbeing={"আমি ভালো আছি","আমি ভাল আছি","ভালো আছি","ভাল আছি"}
+                english_wellbeing={"i am good","i m good","im good","i am fine","i m fine","im fine"}
+                if normalized in bengali_wellbeing | english_wellbeing:
+                    user_name=mk.USER_NAME
+                    reply=(f"শুনে ভালো লাগল, {user_name}! আজ কী নিয়ে কথা বলতে চাও?"
+                           if normalized in bengali_wellbeing
+                           else f"I'm glad to hear that, {user_name}! What would you like to talk about today?")
+                    return {"status":"completed","text":reply}
+            if kind=="chat" and settings["mode"]=="chat":
                 if low in ("what time is it","time","সময় কত","কয়টা বাজে","কয়টা বাজে"):
                     return {"status":"completed","text":"এখন সময় "+datetime.datetime.now().strftime("%I:%M %p")+"।"}
                 if low in ("date","what date is it","আজ কত তারিখ"):
