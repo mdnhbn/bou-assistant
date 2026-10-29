@@ -13,7 +13,7 @@ export interface UiPreferences {
 }
 
 const STORAGE_KEY = "bou.ui-preferences.v1";
-const defaults: UiPreferences = { onboardingComplete: false, preferredName: "Nazmul", characterId: "bou", mode: "3d", language: "bn", voice: "", theme: "midnight", accent: "#96f4d7" };
+const defaults: UiPreferences = { onboardingComplete: false, preferredName: "Nazmul", characterId: "bou", mode: "2d", language: "bn", voice: "", theme: "midnight", accent: "#06b6d4" };
 
 /** Reads only display preferences from this browser; no profile data leaves the device. */
 export function readUiPreferences(): UiPreferences {

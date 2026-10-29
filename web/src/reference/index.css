@@ -1,0 +1,66 @@
+
+@layer base {
+  :root {
+    --accent-primary: #06b6d4;
+    --accent-secondary: #0891b2;
+    --accent-glow: rgba(6, 182, 212, 0.45);
+    --bg-dark: #07090e;
+    --card-surface: rgba(13, 17, 27, 0.75);
+    --card-border: rgba(30, 41, 59, 0.6);
+  }
+
+  html, body, #root {
+    height: 100%;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    background-color: #07090e;
+    color: #e2e8f0;
+    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+    user-select: none;
+  }
+}
+
+/* Custom sci-fi styling */
+.glow-accent {
+  box-shadow: 0 0 25px var(--accent-glow);
+}
+
+.glow-text {
+  text-shadow: 0 0 12px var(--accent-glow);
+}
+
+.glow-border {
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 15px var(--accent-glow);
+}
+
+/* Subtle holographic grid backdrop */
+.holo-grid {
+  background-size: 40px 40px;
+  background-image:
+    linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+}
+
+/* Custom futuristic scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(15, 23, 42, 0.6);
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(51, 65, 85, 0.8);
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--accent-primary);
+}
+
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms!important; transition-duration: .01ms!important; animation-iteration-count: 1!important; } }

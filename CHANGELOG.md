@@ -2,6 +2,34 @@
 
 Every GitHub update must increment the serial version in `VERSION`, keep the app/installer/service version metadata aligned, and add a newest-first entry here and in `README-BN.md`. Each entry records features, how to use them, known limits, and bug fixes (or explicitly says when none were reported). Pushing a `vX.Y.Z` tag triggers the Windows installer workflow.
 
+## 1.11.0 — 2026-10-29
+
+### Added
+- Implemented the interface from the user's `bou-ai-interface.zip`: cockpit header, humanoid/portrait/orb modes, Agent Town, signal feed, chat inspector, theme controls and floating demo panels. Bundled the supplied Bou/Aether portraits; excluded private `.env`, export caches and reference videos. Native voice and server-side credentials are connected through adapters.
+- Default Windows desktop host for the bundled React UI, with WebView2 rendering, local Python Gemini SSE endpoint, authenticated loopback session and persistent per-user UI profile. Installed users need no Node.js/npm/Python setup.
+- Native local Whisper microphone adapter, startup greeting and auto-listening after onboarding (honors installed voice preferences, default on), pause/resume controls and five-language transcription/character voice selection.
+- Gemini key save/remove in Windows Credential Manager; keys never enter browser storage or the installer. Key-free Bengali/English wellbeing replies.
+- Classic tools entry and Start Menu shortcut for the existing archive, workers, camera and confirmed PC workflow. Separate OpenRouter/service credentials remain intact.
+- Per-user character model directory, clear missing-asset instructions, bundled signed offline Microsoft WebView2 installer and Windows 10 1809+ x64/.NET Framework 4.7.2+ checks.
+- Tracked PyInstaller spec, React build and native/bridge tests in release CI. Source launcher builds the UI when needed.
+
+### Fixed
+- Shortcut creation COM AttributeError; component detection under the `_internal` bundle; disk estimate counted dependencies already reused.
+- Declining changed core replacement previously produced mixed app versions. It now cancels the upgrade; identical dependencies are reused, missing files copied, optional dependency replacement still follows the user's choice.
+- Rapid microphone toggle could stop a newer session; stale session IDs are ignored. Non-Bengali transcription no longer always maps to English. UI version labels now share config constants.
+- Provider conversation history starts with a user turn and merges consecutive same-role messages, excluding local welcome cards.
+
+### How to use
+1. Run the release setup, review the scan and retain required components. Accept changed core replacement for an upgrade.
+2. Finish or skip onboarding; hear the greeting and use Mic to pause/resume. Windows mic permission must be enabled by the user.
+3. Add a Gemini key in Settings for general chat. Say “আমি ভালো আছি” for a local key-free reply.
+4. Put model/portrait files in `%LOCALAPPDATA%\BouStudio\models\characters\`; open Classic tools for the older desktop workflows.
+
+### Limits
+- Windows x64 installer only. Character assets are user supplied. External research/messaging/code-execution skills remain TODOs.
+- Edge TTS sends reply text online; Windows fallback voice/language availability varies and stopping it is best-effort. Lip-sync amplitude is synthetic.
+- Classic tools has its separate credentials/settings. New React chat history/memory still is not connected to the Classic archive.
+
 ## 1.10.2 — 2026-10-29
 
 ### Added

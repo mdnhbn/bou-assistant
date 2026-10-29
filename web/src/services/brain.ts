@@ -1,6 +1,7 @@
 import type { CharacterId, LanguageId } from "../config/app";
 import type { ChatMessage } from "../store/types";
 import type { SkillId } from "./skills";
+import { getDesktopApi } from "./desktop";
 
 export interface BrainRequest {
   messages: Pick<ChatMessage, "role" | "text">[];
@@ -21,9 +22,9 @@ export class BrainError extends Error {
 }
 
 function serverMessage(code: string): BrainError {
-  if (code === "missing_key") return new BrainError("missing_key", "Gemini key পাওয়া যায়নি। local .env ফাইলে GEMINI_API_KEY যোগ করে server আবার চালাও।");
+  if (code === "missing_key") return new BrainError("missing_key", getDesktopApi() ? "Gemini key পাওয়া যায়নি। Settings-এ Gemini provider key যোগ করুন।" : "Gemini key পাওয়া যায়নি। local .env ফাইলে GEMINI_API_KEY যোগ করে server আবার চালাও।");
   if (code === "quota") return new BrainError("quota", "Gemini API quota শেষ হয়েছে। পরে আবার চেষ্টা করো; key rotation এখনো যুক্ত হয়নি।");
-  if (code === "provider_auth") return new BrainError("provider_auth", "Gemini key কাজ করছে না বা অনুমতি নেই। local .env-এর key যাচাই করো।");
+  if (code === "provider_auth") return new BrainError("provider_auth", getDesktopApi() ? "Gemini key কাজ করছে না বা অনুমতি নেই। Settings-এর key যাচাই করুন।" : "Gemini key কাজ করছে না বা অনুমতি নেই। local .env-এর key যাচাই করো।");
   return new BrainError("provider_error", "Gemini থেকে উত্তর আনা যায়নি। কিছুক্ষণ পর আবার চেষ্টা করো।");
 }
 
@@ -44,7 +45,7 @@ export async function streamBrainReply(request: BrainRequest): Promise<void> {
     });
   } catch (error) {
     if (request.signal?.aborted) throw error;
-    throw new BrainError("network", "Local brain server-এ পৌঁছানো যাচ্ছে না। npm run dev দিয়ে চালু আছে কি দেখো।");
+    throw new BrainError("network", getDesktopApi() ? "Desktop brain সংযোগ বন্ধ হয়েছে। Bou আবার চালু করুন।" : "Local brain server-এ পৌঁছানো যাচ্ছে না। npm run dev দিয়ে চালু আছে কি দেখো।");
   }
 
   if (!response.ok) {

@@ -460,10 +460,10 @@ class Engine:
             events[index+1].type=1; events[index+1].ki.wScan=code; events[index+1].ki.dwFlags=0x0004|0x0002
         sent=ctypes.windll.user32.SendInput(len(events),events,ctypes.sizeof(INPUT))
         if sent!=len(events):raise OSError("Windows did not accept the full Unicode text action.")
-    def speak(self,text):
+    def speak(self,text,voice=None):
         if self.cancel_event.is_set(): return
         mk.state["stop_speech"]=False
-        if mk.tts_neural(text[:1500]) or self.cancel_event.is_set():
+        if mk.tts_neural(text[:1500],voice=voice) or self.cancel_event.is_set():
             return
         # Match the original Bou voice engine: use Windows speech when Edge TTS
         # is unavailable, offline, or unable to play the generated audio.
@@ -501,7 +501,8 @@ class Engine:
             import numpy as np
             samples=np.frombuffer(raw,dtype=np.int16).astype(np.float32)/32768.0
             model=self._get_whisper_model()
-            lang="bn" if language.lower().startswith("bn") else "en"
+            lang=str(language or "en").lower().replace("_","-").split("-",1)[0]
+            if lang not in {"bn","en","ar","hi","ur"}:lang="en"
             segments,_=model.transcribe(
                 samples,language=lang,task="transcribe",beam_size=3,
                 condition_on_previous_text=False,vad_filter=False,
@@ -519,8 +520,9 @@ class Engine:
         with wave.open(wav_buffer,"wb") as wav_file:
             wav_file.setnchannels(1); wav_file.setsampwidth(2); wav_file.setframerate(16000); wav_file.writeframes(raw)
         encoded=base64.b64encode(wav_buffer.getvalue()).decode("ascii")
-        lang="bn" if language.lower().startswith("bn") else "en"
-        payload={"audio":encoded,"language":[lang,"en" if lang=="bn" else "bn"],
+        lang=str(language or "en").lower().replace("_","-").split("-",1)[0]
+        if lang not in {"bn","en","ar","hi","ur"}:lang="en"
+        payload={"audio":encoded,"language":[lang,"bn" if lang=="en" else "en"],
             "context":{"app":{"name":"Bou","type":"ai"}},
             "properties":{"language":lang,"app_type":"ai","dictionary":[]}}
         response=mk.requests.post("https://platform-api.wisprflow.ai/api/v1/dash/api",

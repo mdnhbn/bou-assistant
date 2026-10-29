@@ -1,30 +1,45 @@
-# Bou AI Assistant · 1.10.2
+# Bou AI Assistant · 1.11.0
 
-Bou is a Windows desktop assistant with local conversation memory and an optional hosted service. Provider API keys stay on the service server; customers connect with individual access tokens.
+Bou opens its React character interface in a native Windows window. The installer bundles the UI, Python, voice packages, offline Whisper model and Microsoft's offline WebView2 runtime installer. End users do not need Node.js, npm or a separate Python installation. The older dashboard remains available through **Classic tools** for its local archive, worker team, camera/PC controls and optional hosted service.
 
 বাংলায় ব্যবহারবিধি: [README-BN.md](README-BN.md) · Version history: [CHANGELOG.md](CHANGELOG.md)
 
 ## Components
 
-- `bou_studio.py`: Bou desktop interface.
+- `bou_desktop.py`: native WebView2 host, local authenticated UI server, Gemini stream and local voice bridge.
+- `web/`: React interface bundled into the default desktop app.
+- `bou_studio.py`: Classic tools dashboard.
 - `bou_core.py` and `bou_gui.py`: Bou voice engine and the simpler standalone interface.
 - `studio_engine.py` and `studio_store.py`: local assistant, worker manager, memory, and hosted-service client.
 - `service/`: FastAPI service and owner admin panel.
 - `service/static/admin.html`: configure agent roles and up to ten encrypted key slots per agent, create or revoke customer accounts.
 
-## Desktop dashboard
+## Install and use
+
+1. Download `Bou-AI-Assistant-Setup.exe` from [Releases](https://github.com/mdnhbn/bou-assistant/releases/latest). Supported target: Windows 10 1809 or newer / Windows 11, x64, with .NET Framework 4.7.2 or newer.
+2. Review the compatibility scan and components. Existing WebView2 and identical Bou dependency files are reused. Missing WebView2 can be installed from the signed offline Microsoft package included in setup; this shared Windows runtime lives outside the private Bou folder.
+3. For upgrades, accept replacement of changed core app files. Declining cancels the upgrade and keeps the old installation; setup does not mix old executable/UI files with new dependencies. Optional unchanged dependencies are skipped.
+4. Finish the eight-step welcome setup or choose **এখন পরে**. Bou speaks the requested Bengali greeting, then starts the local microphone when the installed voice preferences enable auto-start (default on). Press **Mic** to pause/resume and **Stop** to stop speech. Windows microphone access must already be allowed by the user.
+5. In Settings, save your own Gemini key to Windows Credential Manager for general AI chat. It is not included in the installer or stored in browser local storage. “আমি ভালো আছি” works without a provider key. Classic tools uses its separate OpenRouter/service credentials.
+6. Add character files to `%LOCALAPPDATA%\BouStudio\models\characters\`: `bou.vrm`, `aether.vrm`, and optional `bou.png` / `aether.png`. Missing assets show instructions. Model files are user supplied.
+
+The microphone is transcribed locally by Whisper. Recognized chat text goes to Gemini when general AI replies are requested. Neural spoken output uses Edge TTS and sends the reply text to that service; Windows speech is the fallback and voice availability varies. Lip-sync amplitude is synthetic. This release does not include macOS, Linux or Android installers.
+
+## Classic desktop dashboard
 
 The 1.5.0 desktop screen uses a three-column layout inspired by the publicly visible Stonic product: a signal feed, Bou's animated character core and Agent Town, and the chat inspector. The feed reads public BBC World RSS headlines and links each headline to its BBC page. Search opens a browser results page; it does not give the AI an unrestricted web browser. The 2D/3D control changes a local activity illustration, not a live geographic map. Bou does not request GPS. Gesture toggles the character's idle animation; it is not camera-based gesture recognition.
 
 The layout and original Bou artwork are implemented in this project. Bou 1.6.0 added one-frame camera description and user-approved, one-action-at-a-time PC control. Bou 1.7.0 adds a spoken startup greeting and a configurable live microphone conversation; camera capture is still one-shot, and screen monitoring is not continuous. Other Stonic release features not included in Bou include phone calls, floating characters/live wallpaper, custom character personas, reminders, PDF/document attachments, full-page generated visuals, and web research inside AI answers.
 
-## React web companion (experimental)
+## React interface and browser development
 
 The `web/` companion contains a responsive React + TypeScript UI with Bou/Aether VRM and 2D portrait modes, streamed Gemini chat through a loopback-only Node service, browser speech recognition, device text-to-speech, guided code/review/security skills, and a Stonic-inspired eight-step local setup wizard. Its UI preferences stay in this browser; use the **শুরু** button to reopen setup.
 
 Run it from `web/`: install with `npm install`, copy `.env.example` to `.env`, set `GEMINI_API_KEY`, and run `npm run dev`. The real key stays in the server process; do not use a `VITE_` key or commit `.env`.
 
-This is a separate web companion, not a replacement for the Windows desktop app. It does not connect to the native desktop-control flow, local archive, worker team, hosted service key pools, or messaging integrations. Its skill cards provide text guidance only; browser, computer, file, messaging, and code-execution runners are not connected. The Windows app's existing approved, one-action-at-a-time PC control remains in `skills/desktop-control` and `bou_studio.py`.
+The release installer now includes this built UI and runs it through `bou_desktop.py`; its Python host provides Gemini streaming and native local voice. Source users can run `Start-Bou.bat` (Python 3.11+, Node.js needed only if `web/dist` has not been built), or build with `cd web`, `npm ci`, `npm run build`, then `python bou_desktop.py` from the repository root. `python bou_desktop.py --classic` opens the legacy dashboard. Browser development still uses the separate Node server described above.
+
+The React skill cards provide text guidance and connector placeholders. Local archive, workers, camera and confirmed PC control are available through **Classic tools**; these are not silently granted to a model through the React bridge. Browser research, social messaging and arbitrary code execution remain integration TODOs.
 
 Web Speech recognition can send microphone audio to the browser/platform recognition service. See `web/README.md` for the full privacy and setup details.
 
@@ -68,6 +83,17 @@ Local Whisper is the default transcription provider. The first live-listening st
 PC control is off by default and enabled only for the current session. Before every AI planning call, Bou shows the screenshot and asks before sharing it with the configured provider. It then displays one proposed click, key, scroll, or text entry and waits for approval. After executing at most that one action, it stops until the user requests another screenshot. Screenshots and PC-task details are not added to the conversation archive. Passwords, one-time codes, payments, purchases, sending/publishing, deletions, installs, agreements, and security-setting changes are blocked for the user to handle directly.
 
 ## Changelog
+
+### 1.11.0 — React Windows desktop installer and native voice
+
+- Implemented the supplied `bou-ai-interface.zip` cockpit interface, including its header, character stage, Agent Town, signal feed, chat inspector, settings/themes and floating demo panels. Supplied Bou/Aether portraits are bundled; private `.env`, export cache and reference videos are excluded. UI code retains its source license headers.
+- Bundled the React UI in the Windows executable with a Python/WebView2 host; no Node runtime is required for installed users. Added Classic tools entry point and persistent per-user UI settings.
+- Connected native local Whisper, five-language transcription, language/character neural voices, startup greeting and default microphone auto-start after onboarding. Mic and speech stop controls remain visible.
+- Added secure Gemini key save/remove through Windows Credential Manager and key-free wellbeing replies. General AI chat streams through the loopback Python host; no provider credentials are bundled.
+- Included the signed offline WebView2 installer, reuse detection, Windows/.NET compatibility checks and tracked PyInstaller spec. CI builds React, runs boundary checks and packages the complete installer.
+- **Fixed:** installer shortcut COM `AttributeError`, dependency classification under `_internal`, inaccurate disk estimates, mixed old/new core files after declining replacement, stale microphone-session stop races, non-English transcription forced to English, and outdated UI version labels.
+- **Use:** run setup, accept core replacement for upgrades, finish/skip welcome setup, use Mic, add a Gemini key in Settings, and place character files in the per-user characters folder. See the install section above.
+- **Limits:** external skill connectors remain TODOs; Classic tools keeps its separate OpenRouter/service setup. VRM assets are supplied by the user. Only Windows x64 installer is built.
 
 ### 1.10.2 — Stonic-inspired local setup wizard
 

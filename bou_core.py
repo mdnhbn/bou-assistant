@@ -189,10 +189,10 @@ def play_mp3(path):
         return False
 
 
-def tts_neural(text):
+def tts_neural(text, voice=None):
     if not edge_tts:
         return False
-    voice = VOICE_BN if is_bengali(text) else VOICE_EN
+    voice = voice or (VOICE_BN if is_bengali(text) else VOICE_EN)
     for chunk in split_chunks(text):
         if state["stop_speech"]:
             return True

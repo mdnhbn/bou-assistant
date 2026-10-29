@@ -1,20 +1,28 @@
-# Bou AI Assistant 1.10.2
+# Bou AI Assistant 1.11.0
 
-Bou হলো Windows desktop AI assistant, সঙ্গে conversation memory, Manager ও Worker দল, এবং বিক্রির জন্য ব্যবহারকারীভিত্তিক hosted service। Assistant-এর source, service, admin panel ও changelog এই repository-তে রাখা হয়।
+Bou এখন React character interface-সহ native Windows window-তে খুলবে। Installer-এর মধ্যে built UI, Python, voice package, offline Whisper model এবং Microsoft-এর offline WebView2 installer থাকে; ব্যবহারকারীর আলাদা Node.js/npm/Python লাগবে না। আগের archive, Manager/Worker, camera ও PC-control screen **Classic tools** থেকে খোলা যাবে।
 
 ## চালু করা
 
 ### লোকাল ডেস্কটপ মোড
 
-Windows-এ `Start-Bou.bat` চালান। প্রথমবার এটি প্রয়োজন হলে `.venv` বানিয়ে `requirements.txt` থেকে microphone, speech ও desktop package ইনস্টল করবে। Camera feature-এর OpenCV package না থাকলে launcher সেটি ইনস্টল করবে। Settings-এ `Assistant connection` হিসেবে `local` রাখুন। লোকাল মোডে সব AI call আপনার বিদ্যমান একক OpenRouter key দিয়ে হয়।
+[GitHub Releases](https://github.com/mdnhbn/bou-assistant/releases/latest) থেকে `Bou-AI-Assistant-Setup.exe` চালান। Windows 10 1809 বা নতুন / Windows 11 x64 এবং .NET Framework 4.7.2+ লাগবে। Scan report দেখে missing components install করুন। আগে থেকে WebView2 থাকলে reuse হবে; না থাকলে bundled, Microsoft-signed offline package দিয়ে বসবে। WebView2 shared Windows runtime হওয়ায় Bou folder-এর বাইরে থাকবে; Python/voice/UI Bou-র private folder-এ থাকে।
 
-### React web companion (experimental)
+Upgrade-এর সময় changed core app files replace করতে **Yes** দিন। **No** দিলে upgrade cancel হয়ে পুরোনো installation থাকবে; পুরোনো executable/UI-এর সঙ্গে নতুন runtime মেশানো হবে না। Identical dependencies সবসময় skip হবে।
+
+প্রথমবার ৮ ধাপের welcome setup শেষ করুন বা **এখন পরে** চাপুন। Installed voice settings-এ চালু থাকলে (default on) requested Bengali greeting বলার পর local microphone চালু হবে। **Mic** দিয়ে pause/resume এবং **Stop** দিয়ে speech থামান। Windows microphone access ব্যবহারকারীকে allow করতে হবে। Settings-এ নিজের Gemini key save করুন; key Windows Credential Manager-এ থাকবে, browser storage বা installer-এ থাকবে না। “আমি ভালো আছি” key ছাড়াই উত্তর দেয়। Classic tools-এর OpenRouter/service key আলাদা।
+
+Character file রাখুন `%LOCALAPPDATA%\BouStudio\models\characters\`-এ: `bou.vrm`, `aether.vrm`, এবং চাইলে `bou.png`/`aether.png`। ফাইল না থাকলে নির্দেশনা দেখাবে। Whisper microphone audio PC-তেই transcribe করে; সাধারণ AI প্রশ্নের text Gemini-তে যায়। Edge TTS spoken reply text অনলাইনে পাঠায়; Windows speech fallback আছে।
+
+Source থেকে চালাতে Python 3.11+ নিয়ে `Start-Bou.bat` চালান; `web/dist` build না থাকলে launcher-এর Node.js/npm লাগবে। Release installer-এ এই build আগেই থাকে।
+
+### React desktop interface ও browser development
 
 `web/` ফোল্ডারে responsive React + TypeScript UI আছে: Bou/Aether VRM ও 2D portrait mode, loopback-only Node server দিয়ে streamed Gemini chat, browser speech recognition, device text-to-speech, code/review/security guidance skill এবং Stonic-inspired ৮ ধাপের local setup wizard। Wizard-এর নাম, language, voice, character ও display preference browser-এ থাকে; **শুরু** দিয়ে আবার খোলা যায়।
 
 `web/`-এ গিয়ে `npm install` চালান, `.env.example` কপি করে `.env` বানান, তাতে `GEMINI_API_KEY` দিন, তারপর `npm run dev` চালান। আসল key server process-এ থাকে; `VITE_` prefix ব্যবহার বা `.env` commit করবেন না।
 
-এটি আলাদা web companion; Windows desktop app-এর বদলি নয়। Web build native desktop-control, local archive, worker team, hosted service key pool বা messaging integration-এর সঙ্গে যুক্ত নয়। Web skill card-গুলো prompt guidance দেয়; browser, computer, file, messaging বা code-execution runner সংযুক্ত নেই। Windows app-এর বিদ্যমান অনুমতিনির্ভর, একবারে একটি PC action-এর code `skills/desktop-control` ও `bou_studio.py`-তে আছে।
+Release installer এখন এই built React UI নিয়ে `bou_desktop.py` দিয়ে চলে; local Python host-এ Gemini stream ও native voice যুক্ত। Browser-এর জন্য উপরের npm command-গুলো ব্যবহার করুন। React skill card-গুলো prompt guidance/connector placeholder; archive, workers, camera ও অনুমতিভিত্তিক PC control **Classic tools**-এ আছে। Source-এ `python bou_desktop.py --classic` দিয়েও খোলা যায়। Browser research, social messaging ও arbitrary code execution এখনও TODO।
 
 Web Speech recognition microphone audio browser/platform recognition service-এ পাঠাতে পারে। Setup ও privacy-এর বিস্তারিত `web/README.md`-তে আছে।
 
@@ -79,6 +87,17 @@ Bou 1.6.0-তে একবারের camera description এবং অনুম
 মূল desktop assistant, web companion, service, installer ও প্রয়োজনীয় image এই repository-তে আছে। Secret key, `.env`, virtual environment এবং local database Git-এ যোগ হয় না। প্রতিটি GitHub update-এর আগে `VERSION` বাড়ান, installer ও service metadata মিলিয়ে দিন, এবং `CHANGELOG.md` ও এই README-তে serial অনুযায়ী নতুন version-এর feature, ব্যবহারবিধি ও bug-fix লিখুন। Release tag দিলে GitHub Actions নতুন Windows installer বানায়।
 
 ## Changelog
+
+### 1.11.0 — React Windows installer ও native voice
+
+- আপনার দেওয়া `bou-ai-interface.zip`-এর cockpit header, character stage, Agent Town, feed, chat inspector, settings/themes এবং floating demo panel সরাসরি যুক্ত হয়েছে। Bou/Aether portrait bundle হয়েছে; private `.env`, export cache ও reference video বাদ রাখা হয়েছে। এখন imported UI native voice ও secure key adapter দিয়ে চলে।
+- React UI Windows executable-এ bundle হয়েছে; installed user-এর আলাদা Node.js লাগবে না। Classic tools button, per-user UI preference এবং native local voice bridge যোগ হয়েছে।
+- Offline Whisper-এর বাংলা/English/আরবি/হিন্দি/উর্দু transcription, character/language voice selection, startup greeting ও onboarding-এর পর default microphone auto-start যুক্ত হয়েছে। Mic ও Stop দিয়ে নিয়ন্ত্রণ করুন।
+- Settings থেকে Gemini key Windows Credential Manager-এ save/remove করা যায়; installer বা browser storage-এ key থাকে না। Key-free wellbeing reply আছে।
+- Signed offline WebView2 package, existing runtime reuse, Windows/.NET preflight এবং React build/test-সহ complete installer workflow যুক্ত হয়েছে।
+- **Bug fix:** shortcut তৈরির COM AttributeError, `_internal` folder-এর dependency ভুল classification, disk-space estimate, পুরোনো/নতুন core file মিশে যাওয়া, দ্রুত Mic toggle-এ stale session stop, non-English transcription English হয়ে যাওয়া এবং UI version label ঠিক হয়েছে।
+- **ব্যবহার:** setup চালান; upgrade-এ changed core replace করুন; welcome setup finish/skip করুন; Mic ব্যবহার করুন; Settings-এ Gemini key দিন; character files উপরের per-user folder-এ রাখুন।
+- **সীমা:** skill connector-গুলো TODO; Classic tools-এর OpenRouter/service setup আলাদা। Model ব্যবহারকারীকে দিতে হবে। এই release শুধু Windows x64 installer দেয়।
 
 ### 1.10.2 — Stonic-inspired local setup wizard
 

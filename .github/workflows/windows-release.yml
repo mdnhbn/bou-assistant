@@ -16,6 +16,32 @@ jobs:
       - name: Check out source
         uses: actions/checkout@v4
 
+      - name: Validate release version
+        shell: pwsh
+        run: |
+          $version = (Get-Content VERSION -Raw).Trim()
+          if ($env:GITHUB_REF -like 'refs/tags/v*' -and $env:GITHUB_REF_NAME -ne "v$version") {
+            throw "Tag $env:GITHUB_REF_NAME does not match VERSION $version."
+          }
+
+      - name: Set up Node for the interface build
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Build the bundled React interface
+        working-directory: web
+        shell: pwsh
+        run: |
+          npm ci
+          if ($LASTEXITCODE -ne 0) { throw "Web dependency installation failed with exit code $LASTEXITCODE." }
+          npm run test:desktop
+          if ($LASTEXITCODE -ne 0) { throw "Desktop bridge checks failed with exit code $LASTEXITCODE." }
+          npm run build
+          if ($LASTEXITCODE -ne 0) { throw "Web build failed with exit code $LASTEXITCODE." }
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -28,6 +54,12 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install -r requirements.txt pyinstaller huggingface-hub
 
+      - name: Check desktop host and native language adapters
+        shell: pwsh
+        run: |
+          python -m unittest test_desktop_host test_native_languages -v
+          if ($LASTEXITCODE -ne 0) { throw "Desktop checks failed with exit code $LASTEXITCODE." }
+
       - name: Download the offline Whisper model
         shell: pwsh
         run: |
@@ -38,28 +70,35 @@ jobs:
           Get-ChildItem -LiteralPath $download -File | Copy-Item -Destination $bundle
           if (-not (Test-Path (Join-Path $bundle "model.bin"))) { throw "Whisper model payload is missing." }
 
+      - name: Download and verify offline Microsoft WebView2 runtime
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Path build-assets -Force | Out-Null
+          $runtime = Join-Path $env:GITHUB_WORKSPACE 'build-assets\MicrosoftEdgeWebView2RuntimeInstallerX64.exe'
+          Invoke-WebRequest -Uri 'https://go.microsoft.com/fwlink/?linkid=2124701' -OutFile $runtime
+          $signature = Get-AuthenticodeSignature -LiteralPath $runtime
+          if ($signature.Status -ne 'Valid' -or $signature.SignerCertificate.Subject -notmatch 'CN=Microsoft Corporation(?:,|$)') {
+            throw 'The WebView2 installer does not have a valid Microsoft Authenticode signature.'
+          }
+          Get-FileHash -LiteralPath $runtime -Algorithm SHA256 | Format-List
+
       - name: Package desktop app
         shell: pwsh
         run: |
-          python -m PyInstaller --noconfirm --clean --windowed --onedir --name BouAssistant `
-            --collect-all faster_whisper --collect-all ctranslate2 --collect-all huggingface_hub `
-            --collect-all tokenizers --collect-all sounddevice --collect-all cv2 `
-            --collect-all pyttsx3 --collect-all comtypes --collect-all keyring `
-            --collect-all PIL --collect-all pyautogui --collect-all numpy `
-            --hidden-import pyttsx3.drivers.sapi5 --hidden-import comtypes.client `
-            --hidden-import tkinter --hidden-import tkinter.ttk `
-            --add-data "skills;skills" --add-data "bou-voice.png;." `
-            --add-data "bou-assistant.png;." `
-            --add-data "build-assets\whisper-small;models\whisper-small" `
-            bou_studio.py
+          python -m PyInstaller --noconfirm --clean BouAssistant.spec
+          if ($LASTEXITCODE -ne 0) { throw "App packaging failed with exit code $LASTEXITCODE." }
+          if (-not (Test-Path 'dist\BouAssistant\_internal\web\dist\index.html')) {
+            throw 'The React interface is missing from the desktop bundle.'
+          }
 
       - name: Build self-extracting setup executable
         shell: pwsh
         run: |
           $payload = (Resolve-Path "dist\BouAssistant").Path
+          $runtime = (Resolve-Path 'build-assets\MicrosoftEdgeWebView2RuntimeInstallerX64.exe').Path
           python -m PyInstaller --noconfirm --clean --windowed --onefile --name Bou-AI-Assistant-Setup `
-            --collect-all comtypes --hidden-import comtypes.client `
-            --add-data "$payload;payload" `
+            --collect-all comtypes --hidden-import comtypes.client --hidden-import comtypes.client.dynamic `
+            --add-data "$payload;payload" --add-data "$runtime;prerequisites" `
             --distpath dist-installer --workpath build-installer --specpath build-installer `
             installer\installer.py
           if ($LASTEXITCODE -ne 0) { throw "Setup packaging failed with exit code $LASTEXITCODE." }

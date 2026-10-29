@@ -1,5 +1,5 @@
 import { Activity, Circle, KeyRound, Radio } from "lucide-react";
-import { CHARACTERS, type CharacterId, type DisplayMode } from "../config/app";
+import { APP_VERSION, CHARACTERS, type CharacterId, type DisplayMode } from "../config/app";
 import type { AssistantStatus } from "../store/types";
 
 const statusLabel: Record<AssistantStatus, string> = { idle: "অপেক্ষায়", listening: "শুনছে", thinking: "ভাবছে", speaking: "বলছে" };
@@ -22,7 +22,7 @@ export function StatusBar({ characterId, mode, status, connection, keyLabel }: {
       <div className="status-item status-desktop-only"><Radio size={13} /><span>MODE</span><b>{mode.toUpperCase()}</b></div>
       <span className="status-divider status-desktop-only" />
       <div className="status-item status-key status-desktop-only"><KeyRound size={13} /><span>SERVER KEY</span><b>{keyLabel}</b></div>
-      <span className="status-end">LOCAL BUILD 02 <i /></span>
+      <span className="status-end">BOU {APP_VERSION} <i /></span>
     </footer>
   );
 }

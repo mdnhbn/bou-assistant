@@ -7,6 +7,7 @@ export function MicButton({ listening, onClick, disabled }: { listening: boolean
       className={"mic-button" + (listening ? " is-listening" : "")}
       onClick={onClick}
       disabled={disabled}
+      aria-pressed={listening}
       aria-label={listening ? "কথা বলা থামাও" : "কথা বলা শুরু করো"}
       title={listening ? "কথা বলা থামাও" : "কথা বলা শুরু করো"}
     >

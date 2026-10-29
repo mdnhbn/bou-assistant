@@ -10,3 +10,4 @@ keyring
 numpy
 faster-whisper
 opencv-python
+pywebview==6.2.1

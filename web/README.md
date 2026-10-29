@@ -1,6 +1,14 @@
 # Bou — local AI voice assistant
 
-Bou is a responsive React + TypeScript interface for a personal assistant. It now has a loopback-only Node brain service, streamed Gemini chat, browser speech recognition, system text-to-speech, VRM/2D character rendering, and prompt-guided specialist skills.
+Bou is a responsive React + TypeScript interface for a personal assistant, now bundled into the Windows desktop installer. It supports native local Whisper, streamed Gemini chat, spoken replies, VRM/2D characters and prompt-guided specialist skills. Browser development can still use the separate loopback Node server.
+
+## Installed Windows app
+
+The cockpit's visual source comes from the user's `bou-ai-interface.zip`. It lives under `src/reference/` and retains its Apache-2.0 source headers. Service adapters use the tested local/native bridge. Export `.env`, AI Studio cache, and reference videos are not published. Portraits supplied in the archive are bundled in `public/models/`; a human portrait is available immediately in 2D mode.
+
+Run the current release setup, then open Bou. No Node.js/npm/Python installation is needed. The native Python host serves the built UI at a fixed loopback origin, and the pywebview bridge provides local microphone transcription and speech. After onboarding, the startup greeting and local microphone follow the installed voice preferences (both default on). Mic pauses/resumes capture. Add your own Gemini key in Settings; it is saved in Windows Credential Manager, never localStorage. General chat still requires internet/provider access; the first wellbeing reply is local.
+
+Place installed character assets in `%LOCALAPPDATA%\BouStudio\models\characters\` (`bou.vrm`, `aether.vrm`, optional matching PNGs). **Classic tools** opens the older dashboard for its archive, workers, camera and approved PC controls with its separate OpenRouter/service setup. New interface skill cards remain guidance/placeholders.
 
 External computer actions are not connected. The assistant cannot browse, click desktop apps, read/write project files, send messages, or execute generated code in this build. Skill cards for those integrations are explicit placeholders.
 
@@ -21,13 +29,15 @@ External computer actions are not connected. The assistant cannot browse, click 
 
 The local brain binds to `127.0.0.1:8787`; Vite proxies `/api` requests to it. The key is read only by Node and is never placed in the browser bundle. `.env` is git-ignored. Do not put a real key in a `VITE_*` variable or commit it.
 
-For a static UI build, run `npm run build`. The local Node service still needs a separate production packaging/deployment plan before the built UI can call it.
+For a static UI build, run `npm run build`. The Windows build bundles `web/dist` with `bou_desktop.py`; its Python server provides the compatible `/api/health` and streamed `/api/chat` endpoints. Source desktop launch: `python bou_desktop.py` from the repository root after building. Browser development remains Node-backed.
 
 ## First-run setup
 
-The first visit opens an eight-step local wizard for the welcome checklist, preferred name, language and device voice, character and display mode, theme/accent, greeting preview, demo memory and optional provider status. It does not create an account, activate a subscription, request the microphone, or submit anything. Preferences stay in this browser's local storage. Use **শুরু** in the header to reopen the wizard; use **এখন পরে** to skip. The initial checklist is informational, not a PC scan; the Windows installer handles compatibility and dependency checks.
+The first visit opens an eight-step local wizard for the welcome checklist, preferred name, language and voice, character/display, theme/accent, greeting preview, demo memory and optional provider status. It creates no account or subscription. Preferences stay locally in the browser/native WebView profile. Use **শুরু** to reopen setup or **এখন পরে** to skip. The installed desktop starts greeting/listening after this screen when its voice preferences are enabled; browser mode asks for microphone access only after Mic. The checklist is informational; the Windows installer performs compatibility/dependency checks.
 
 ## Voice and privacy
+
+- Installed desktop: microphone audio is transcribed locally by the bundled Whisper model. Recognized conversation text is sent to Gemini for general AI replies. Edge TTS receives reply text for neural speech; Windows speech is the fallback. Stop during Windows speech fallback can be delayed until the OS finishes the current utterance. Native transcription/voice selection supports Bengali, English, Arabic, Hindi and Urdu; fallback voices depend on the OS.
 
 - Speech recognition uses the browser's Web Speech API, when available, and asks for microphone access after you press the mic button.
 - Browser speech recognition may send audio to the browser/platform recognition service. Its network and retention behavior depends on the browser and operating system. Do not use it for sensitive speech until you have reviewed that provider's privacy settings.
@@ -71,7 +81,7 @@ The API key-slot list and automatic-rotation toggle in Settings are demo UI only
 ## Project map
 
 - `src/components`: CharacterStage, Character3D, Character2D, OnboardingWizard, ChatPanel, MicButton, StatusBar, SettingsPanel, SkillsPanel, MemoryPanel
-- `src/services`: streaming brain client, speech services, memory/API-key placeholders, typed skill catalog and non-executing runner stub
+- `src/services`: streaming brain client, typed desktop bridge/native voice adapter, browser speech fallback, memory/API-key placeholders and non-executing skill stub
 - `src/store`: character, display mode, assistant state, and conversation reducer
 - `src/config`: app name, characters, personas, language/speech lists, and browser-local UI preferences
 - `server/index.ts`: local-only Gemini streaming endpoint

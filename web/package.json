@@ -1,14 +1,15 @@
 {
   "name": "bou-voice-assistant",
   "private": true,
-  "version": "0.3.0",
+  "version": "0.4.0",
   "type": "module",
   "scripts": {
     "dev": "concurrently -k \"npm:dev:web\" \"npm:dev:server\"",
     "dev:web": "vite --strictPort",
     "dev:server": "tsx watch server/index.ts",
     "build": "tsc -b && tsc -p tsconfig.server.json && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test:desktop": "node --import tsx --test src/services/desktop.test.ts"
   },
   "dependencies": {
     "@google/genai": "^2.32.0",
@@ -17,6 +18,7 @@
     "@react-three/fiber": "^9.8.2",
     "dotenv": "^18.0.9",
     "lucide-react": "^1.64.0",
+    "motion": "12.23.24",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
     "three": "^0.186.1"
