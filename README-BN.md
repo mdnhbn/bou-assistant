@@ -8,7 +8,17 @@ Bou হলো Windows desktop AI assistant, সঙ্গে conversation memory,
 
 Windows-এ `Start-Bou.bat` চালান। প্রথমবার এটি প্রয়োজন হলে `.venv` বানিয়ে `requirements.txt` থেকে microphone, speech ও desktop package ইনস্টল করবে। Camera feature-এর OpenCV package না থাকলে launcher সেটি ইনস্টল করবে। Settings-এ `Assistant connection` হিসেবে `local` রাখুন। লোকাল মোডে সব AI call আপনার বিদ্যমান একক OpenRouter key দিয়ে হয়।
 
-### Hosted service মোড
+### React web companion (experimental)
+
+`web/` ফোল্ডারে responsive React + TypeScript UI যোগ হয়েছে: Bou/Aether VRM ও 2D portrait mode, loopback-only Node server দিয়ে streamed Gemini chat, browser speech recognition, device text-to-speech, এবং code/review/security guidance skill।
+
+`web/`-এ গিয়ে `npm install` চালান, `.env.example` কপি করে `.env` বানান, তাতে `GEMINI_API_KEY` দিন, তারপর `npm run dev` চালান। আসল key server process-এ থাকে; `VITE_` prefix ব্যবহার বা `.env` commit করবেন না।
+
+এটি আলাদা web companion; Windows desktop app-এর বদলি নয়। Web build native desktop-control, local archive, worker team, hosted service key pool বা messaging integration-এর সঙ্গে যুক্ত নয়। Web skill card-গুলো prompt guidance দেয়; browser, computer, file, messaging বা code-execution runner সংযুক্ত নেই। Windows app-এর বিদ্যমান অনুমতিনির্ভর, একবারে একটি PC action-এর code `skills/desktop-control` ও `bou_studio.py`-তে আছে।
+
+Web Speech recognition microphone audio browser/platform recognition service-এ পাঠাতে পারে। Setup ও privacy-এর বিস্তারিত `web/README.md`-তে আছে।
+
+## Hosted service মোড
 
 Hosted mode-এ Provider API key ব্যবহারকারীর PC-তে থাকে না; এগুলো server-এ encrypted অবস্থায় থাকে। Server-এ Docker ও Compose দিয়ে service চালান:
 

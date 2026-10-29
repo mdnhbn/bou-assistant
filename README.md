@@ -18,6 +18,16 @@ The 1.5.0 desktop screen uses a three-column layout inspired by the publicly vis
 
 The layout and original Bou artwork are implemented in this project. Bou 1.6.0 added one-frame camera description and user-approved, one-action-at-a-time PC control. Bou 1.7.0 adds a spoken startup greeting and a configurable live microphone conversation; camera capture is still one-shot, and screen monitoring is not continuous. Other Stonic release features not included in Bou include phone calls, floating characters/live wallpaper, custom character personas, reminders, PDF/document attachments, full-page generated visuals, and web research inside AI answers.
 
+## React web companion (experimental)
+
+The new `web/` folder contains a responsive React + TypeScript UI with Bou/Aether VRM and 2D portrait modes, streamed Gemini chat through a loopback-only Node service, browser speech recognition, device text-to-speech, and guided code/review/security skills.
+
+Run it from `web/`: install with `npm install`, copy `.env.example` to `.env`, set `GEMINI_API_KEY`, and run `npm run dev`. The real key stays in the server process; do not use a `VITE_` key or commit `.env`.
+
+This is a separate web companion, not a replacement for the Windows desktop app. It does not connect to the native desktop-control flow, local archive, worker team, hosted service key pools, or messaging integrations. Its skill cards provide text guidance only; browser, computer, file, messaging, and code-execution runners are not connected. The Windows app's existing approved, one-action-at-a-time PC control remains in `skills/desktop-control` and `bou_studio.py`.
+
+Web Speech recognition can send microphone audio to the browser/platform recognition service. See `web/README.md` for the full privacy and setup details.
+
 ## Hosted service setup
 
 1. Copy `.env.example` to `.env` on the server. Set a long random `BOU_ADMIN_TOKEN` and generate `BOU_MASTER_KEY` with:
