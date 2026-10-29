@@ -1,4 +1,4 @@
-# Bou AI Assistant 1.10.1
+# Bou AI Assistant 1.10.2
 
 Bou হলো Windows desktop AI assistant, সঙ্গে conversation memory, Manager ও Worker দল, এবং বিক্রির জন্য ব্যবহারকারীভিত্তিক hosted service। Assistant-এর source, service, admin panel ও changelog এই repository-তে রাখা হয়।
 
@@ -10,7 +10,7 @@ Windows-এ `Start-Bou.bat` চালান। প্রথমবার এট�
 
 ### React web companion (experimental)
 
-`web/` ফোল্ডারে responsive React + TypeScript UI যোগ হয়েছে: Bou/Aether VRM ও 2D portrait mode, loopback-only Node server দিয়ে streamed Gemini chat, browser speech recognition, device text-to-speech, এবং code/review/security guidance skill।
+`web/` ফোল্ডারে responsive React + TypeScript UI আছে: Bou/Aether VRM ও 2D portrait mode, loopback-only Node server দিয়ে streamed Gemini chat, browser speech recognition, device text-to-speech, code/review/security guidance skill এবং Stonic-inspired ৮ ধাপের local setup wizard। Wizard-এর নাম, language, voice, character ও display preference browser-এ থাকে; **শুরু** দিয়ে আবার খোলা যায়।
 
 `web/`-এ গিয়ে `npm install` চালান, `.env.example` কপি করে `.env` বানান, তাতে `GEMINI_API_KEY` দিন, তারপর `npm run dev` চালান। আসল key server process-এ থাকে; `VITE_` prefix ব্যবহার বা `.env` commit করবেন না।
 
@@ -79,6 +79,17 @@ Bou 1.6.0-তে একবারের camera description এবং অনুম
 মূল desktop assistant, web companion, service, installer ও প্রয়োজনীয় image এই repository-তে আছে। Secret key, `.env`, virtual environment এবং local database Git-এ যোগ হয় না। প্রতিটি GitHub update-এর আগে `VERSION` বাড়ান, installer ও service metadata মিলিয়ে দিন, এবং `CHANGELOG.md` ও এই README-তে serial অনুযায়ী নতুন version-এর feature, ব্যবহারবিধি ও bug-fix লিখুন। Release tag দিলে GitHub Actions নতুন Windows installer বানায়।
 
 ## Changelog
+
+### 1.10.2 — Stonic-inspired local setup wizard
+
+- React web companion-এ dark sci-fi theme, ধাপে ধাপে progress, বাম পাশে setup form এবং ডান পাশে Bou/Aether-এর human VRM preview-সহ responsive ৮ ধাপের first-run wizard যোগ হয়েছে।
+- নাম, বাংলা/English/আরবি/হিন্দি/উর্দু ভাষা, system voice, character, 2D/3D mode, theme ও accent বেছে নেওয়া যায়। Greeting preview, demo memory এবং optional provider status দেখা যায়।
+- পছন্দগুলো শুধু browser-এর local storage-এ থাকে। Header-এর **শুরু** বোতাম দিয়ে wizard আবার খোলা যায়। Login, account activation, payment বা mic prompt নেই; Web companion-এ Mic button চাপলেই microphone permission চাওয়া হয়।
+- **Bug fix:** ChatPanel auto-scroll-এর effect return value cleanup হিসেবে ভুল ধরা পড়ত; React development runtime warning বন্ধ করতে effect-টি ঠিক করা হয়েছে।
+
+**ব্যবহার:** `web/`-এ `npm install` ও `npm run dev` চালান। প্রথমবার আটটি ধাপ দেখুন বা **এখন পরে** দিয়ে skip করুন। শেষে **Bou খুলুন** চাপুন। Character file `web/public/models/`-এ রাখুন।
+
+**সীমা:** wizard-এর checklist hardware scan করে না; Windows installer-এর compatibility/dependency scan আগের মতো থাকে। Memory/API slot rotation demo; VRM ও portrait image ব্যবহারকারীকে দিতে হবে।
 
 ### 1.10.1 — dependency scan ও নির্বাচিত install
 

@@ -15,7 +15,7 @@ export function ChatPanel({ messages, status, mobileOpen, onClose, characterName
   connectionLabel: string;
 }) {
   const bottomRef = useRef<HTMLDivElement>(null);
-  useEffect(() => bottomRef.current?.scrollIntoView({ behavior: "smooth" }), [messages.length, messages.at(-1)?.text, status]);
+  useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages.length, messages.at(-1)?.text, status]);
 
   return (
     <aside className={"chat-panel" + (mobileOpen ? " is-mobile-open" : "")}>

@@ -1,6 +1,9 @@
 import { useEffect, useRef, useState, type FormEvent, type CSSProperties } from "react";
 import { AudioLines, AudioWaveform, Check, ChevronDown, MessageSquareText, Settings2, Sparkles, Square, UserRound } from "lucide-react";
 import { APP_NAME, CHARACTERS, type CharacterId, type DisplayMode, type LanguageId } from "./config/app";
+import { readUiPreferences, saveUiPreferences } from "./config/preferences";
+import type { AppTheme } from "./config/preferences";
+import { OnboardingWizard, type OnboardingPreferences } from "./components/OnboardingWizard";
 import { CharacterStage } from "./components/CharacterStage";
 import { ChatPanel } from "./components/ChatPanel";
 import { MicButton } from "./components/MicButton";
@@ -19,14 +22,18 @@ const stateLabels: Record<AssistantStatus, string> = { idle: "অপেক্ষ
 export default function App() {
   const { state, dispatch } = useAssistantStore();
   useEffect(() => { document.title = APP_NAME + " — AI Voice Companion"; }, []);
+  const [savedPreferences] = useState(readUiPreferences);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
+  const [onboardingOpen, setOnboardingOpen] = useState(() => !savedPreferences.onboardingComplete);
+  const [setupComplete, setSetupComplete] = useState(savedPreferences.onboardingComplete);
+  const [preferredName, setPreferredName] = useState(savedPreferences.preferredName);
   const [draft, setDraft] = useState("");
-  const [language, setLanguage] = useState<LanguageId>("bn");
-  const [voice, setVoice] = useState("");
+  const [language, setLanguage] = useState<LanguageId>(savedPreferences.language);
+  const [voice, setVoice] = useState(savedPreferences.voice);
   const [voiceOptions, setVoiceOptions] = useState<VoiceOption[]>(() => listSystemVoices());
-  const [theme, setTheme] = useState<"midnight" | "nebula">("midnight");
-  const [accent, setAccent] = useState("#96f4d7");
+  const [theme, setTheme] = useState<AppTheme>(savedPreferences.theme);
+  const [accent, setAccent] = useState(savedPreferences.accent);
   const [apiKeys, setApiKeys] = useState<ApiKeySlot[]>(() => getMockApiKeys());
   const [activeKeyId, setActiveKeyId] = useState("slot-01");
   const [autoRotate, setAutoRotate] = useState(true);
@@ -51,6 +58,10 @@ export default function App() {
     }).catch(() => { if (alive) { setServerReady(false); setKeyConfigured(false); } });
     return () => { alive = false; };
   }, []);
+
+  useEffect(() => {
+    saveUiPreferences({ onboardingComplete: setupComplete, preferredName, characterId: state.characterId, mode: state.mode, language, voice, theme, accent });
+  }, [setupComplete, preferredName, state.characterId, state.mode, language, voice, theme, accent]);
 
   useEffect(() => watchSystemVoices(setVoiceOptions), []);
   useEffect(() => () => {
@@ -213,6 +224,22 @@ export default function App() {
     if (state.status === "speaking") setStatus("idle");
   }
 
+  function completeOnboarding(preferences: OnboardingPreferences) {
+    setPreferredName(preferences.preferredName.trim() || "Nazmul");
+    setLanguage(preferences.language);
+    setVoice(preferences.voice);
+    setTheme(preferences.theme);
+    setAccent(preferences.accent);
+    chooseCharacter(preferences.characterId);
+    chooseMode(preferences.mode);
+    setSetupComplete(true);
+    setOnboardingOpen(false);
+  }
+
+  function skipOnboarding() {
+    setSetupComplete(true);
+    setOnboardingOpen(false);
+  }
   function submitMessage(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     void sendTurn(draft);
@@ -228,11 +255,13 @@ export default function App() {
   return (
     <div className={"app-shell flex flex-col theme-" + theme} style={{ "--accent": accent, "--accent-soft": accent + "2e" } as CSSProperties}>
       <div className="ambient ambient-top" /><div className="ambient ambient-bottom" />
+      {!onboardingOpen && <>
       <header className="topbar">
         <div className="brand-lockup"><div className="brand-emblem"><AudioWaveform size={19} strokeWidth={1.8} /></div><div className="brand-name-wrap"><span>AI VOICE COMPANION</span><strong>{APP_NAME}<i>.</i></strong></div></div>
         <div className="topbar-center"><span className="system-pulse"><i /> LOCAL BRAIN · {model.toUpperCase()}</span><span className="topbar-divider" /><span className="topbar-status">{stateLabels[state.status]}</span></div>
         <div className="topbar-actions">
           <button className="icon-button chat-open-button" onClick={() => setChatOpen(true)} aria-label="কথোপকথন দেখো"><MessageSquareText size={17} /><span>{state.messages.length}</span></button>
+          <button className="setup-trigger" onClick={() => setOnboardingOpen(true)} aria-label="প্রথমবারের setup আবার খোলো"><Sparkles size={15} /><span>শুরু</span></button>
           <button className="settings-trigger" onClick={() => setSettingsOpen(true)}><Settings2 size={16} /><span>সেটিংস</span></button>
         </div>
       </header>
@@ -290,6 +319,7 @@ export default function App() {
 
       <StatusBar characterId={state.characterId} mode={state.mode} status={state.status} connection={connectionLabel} keyLabel={serverKeyLabel} />
 
+
       <SettingsPanel
         open={settingsOpen} onClose={() => setSettingsOpen(false)}
         characterId={state.characterId} onCharacterChange={chooseCharacter}
@@ -311,6 +341,12 @@ export default function App() {
         onToggleSkill={(id, enabled) => setSkills((items) => setSkillEnabled(items, id, enabled))}
         connectionLabel={connectionLabel}
       />
+      </>}
+      {onboardingOpen && <OnboardingWizard
+        initial={{ preferredName, characterId: state.characterId, mode: state.mode, language, voice, theme, accent }}
+        voiceOptions={voiceOptions} serverReady={serverReady} keyConfigured={keyConfigured}
+        onComplete={completeOnboarding} onSkip={skipOnboarding}
+      />}
     </div>
   );
 }

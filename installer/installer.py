@@ -14,7 +14,7 @@ from pathlib import Path
 import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
 
-VERSION = "1.10.1"
+VERSION = "1.10.2"
 APP_NAME = "Bou AI Assistant"
 UNINSTALL_KEY = r"Software\Microsoft\Windows\CurrentVersion\Uninstall\BouAIAssistant"
 MODEL_PATH = Path("models") / "whisper-small"

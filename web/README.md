@@ -23,6 +23,10 @@ The local brain binds to `127.0.0.1:8787`; Vite proxies `/api` requests to it. T
 
 For a static UI build, run `npm run build`. The local Node service still needs a separate production packaging/deployment plan before the built UI can call it.
 
+## First-run setup
+
+The first visit opens an eight-step local wizard for the welcome checklist, preferred name, language and device voice, character and display mode, theme/accent, greeting preview, demo memory and optional provider status. It does not create an account, activate a subscription, request the microphone, or submit anything. Preferences stay in this browser's local storage. Use **শুরু** in the header to reopen the wizard; use **এখন পরে** to skip. The initial checklist is informational, not a PC scan; the Windows installer handles compatibility and dependency checks.
+
 ## Voice and privacy
 
 - Speech recognition uses the browser's Web Speech API, when available, and asks for microphone access after you press the mic button.
@@ -66,9 +70,9 @@ The API key-slot list and automatic-rotation toggle in Settings are demo UI only
 
 ## Project map
 
-- `src/components`: CharacterStage, Character3D, Character2D, ChatPanel, MicButton, StatusBar, SettingsPanel, SkillsPanel, MemoryPanel
+- `src/components`: CharacterStage, Character3D, Character2D, OnboardingWizard, ChatPanel, MicButton, StatusBar, SettingsPanel, SkillsPanel, MemoryPanel
 - `src/services`: streaming brain client, speech services, memory/API-key placeholders, typed skill catalog and non-executing runner stub
 - `src/store`: character, display mode, assistant state, and conversation reducer
-- `src/config`: app name, characters, personas, language and speech-code lists
+- `src/config`: app name, characters, personas, language/speech lists, and browser-local UI preferences
 - `server/index.ts`: local-only Gemini streaming endpoint
 - `public/models`: user-supplied VRM models and portrait images

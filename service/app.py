@@ -43,7 +43,7 @@ DEFAULT_ASSIGNMENTS = {
     "reviewer": "Independently review the request and identify gaps, errors, or improvements.",
 }
 
-app = FastAPI(title="Bou Service", version="1.10.1")
+app = FastAPI(title="Bou Service", version="1.10.2")
 
 
 def db_connect():

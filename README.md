@@ -1,4 +1,4 @@
-# Bou AI Assistant · 1.10.1
+# Bou AI Assistant · 1.10.2
 
 Bou is a Windows desktop assistant with local conversation memory and an optional hosted service. Provider API keys stay on the service server; customers connect with individual access tokens.
 
@@ -20,7 +20,7 @@ The layout and original Bou artwork are implemented in this project. Bou 1.6.0 a
 
 ## React web companion (experimental)
 
-The new `web/` folder contains a responsive React + TypeScript UI with Bou/Aether VRM and 2D portrait modes, streamed Gemini chat through a loopback-only Node service, browser speech recognition, device text-to-speech, and guided code/review/security skills.
+The `web/` companion contains a responsive React + TypeScript UI with Bou/Aether VRM and 2D portrait modes, streamed Gemini chat through a loopback-only Node service, browser speech recognition, device text-to-speech, guided code/review/security skills, and a Stonic-inspired eight-step local setup wizard. Its UI preferences stay in this browser; use the **শুরু** button to reopen setup.
 
 Run it from `web/`: install with `npm install`, copy `.env.example` to `.env`, set `GEMINI_API_KEY`, and run `npm run dev`. The real key stays in the server process; do not use a `VITE_` key or commit `.env`.
 
@@ -68,6 +68,17 @@ Local Whisper is the default transcription provider. The first live-listening st
 PC control is off by default and enabled only for the current session. Before every AI planning call, Bou shows the screenshot and asks before sharing it with the configured provider. It then displays one proposed click, key, scroll, or text entry and waits for approval. After executing at most that one action, it stops until the user requests another screenshot. Screenshots and PC-task details are not added to the conversation archive. Passwords, one-time codes, payments, purchases, sending/publishing, deletions, installs, agreements, and security-setting changes are blocked for the user to handle directly.
 
 ## Changelog
+
+### 1.10.2 — Stonic-inspired local setup wizard
+
+- Added a responsive eight-step first-run wizard to the React companion, with a dark two-column setup flow and the existing human VRM character preview.
+- Users can choose a preferred name, language/system voice, Bou/Aether, 2D/3D, theme and accent; preview the welcome line; review demo memory and see whether an optional local provider is available.
+- Display preferences are stored only in browser local storage. Reopen setup from **শুরু**. No sign-in, activation, payment or microphone request is part of this wizard.
+- **Bug fix:** corrected the ChatPanel auto-scroll effect so it no longer returns a non-cleanup value to React.
+
+**Use:** In `web/`, run `npm install` and `npm run dev`; complete the steps and choose **Bou খুলুন**, or skip with **এখন পরে**. Place VRM and portrait assets in `web/public/models/`.
+
+**Limits:** The checklist is informational and does not scan hardware; the Windows installer remains responsible for dependency checks. Memory and key-slot rotation stay demo UI, and character assets are user supplied.
 
 ### 1.10.1 — dependency scan and selective install
 

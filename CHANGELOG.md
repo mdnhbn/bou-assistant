@@ -2,6 +2,28 @@
 
 Every GitHub update must increment the serial version in `VERSION`, keep the app/installer/service version metadata aligned, and add a newest-first entry here and in `README-BN.md`. Each entry records features, how to use them, known limits, and bug fixes (or explicitly says when none were reported). Pushing a `vX.Y.Z` tag triggers the Windows installer workflow.
 
+## 1.10.2 — 2026-10-29
+
+### Added
+- A responsive eight-step first-run wizard in the React web companion, inspired by the dark, spacious setup flow observed in Stonic Desktop while retaining Bou's human VRM character stage.
+- The wizard covers a clearly labeled local setup checklist, preferred name, language/system voice, Bou or Aether, 2D/3D mode, theme/accent, greeting preview, demo memory, and optional provider status.
+- UI preferences are stored locally in the current browser. The `শুরু` header button reopens setup at any time.
+- Setup has no sign-in, activation, payment, or microphone request. Browser microphone access remains behind the Mic button.
+
+### Bug fixes
+- Fixed a ChatPanel auto-scroll effect that returned a non-cleanup value and caused React development runtime warnings.
+
+### How to use
+1. Open `web/` and run `npm install`, then `npm run dev`.
+2. On first launch, move through the eight setup steps and select **Bou খুলুন**. Use **এখন পরে** to skip.
+3. Reopen the wizard with the **শুরু** button. Change active display preferences later in Settings.
+4. Add `bou.vrm` / `aether.vrm` and optional portrait PNG files to `web/public/models/` for character assets.
+
+### Limits
+- The setup checklist is a UI summary, not a second hardware scan. The Windows installer continues to perform its compatibility and dependency scan.
+- Memory cards and API slot rotation remain demo UI. A configured local Gemini service is optional for this wizard.
+- This version still needs user-supplied VRM/portrait assets; missing files show their expected paths.
+
 ## 1.10.1 — 2026-10-29
 
 ### Added

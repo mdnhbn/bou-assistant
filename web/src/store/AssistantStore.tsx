@@ -1,9 +1,11 @@
 import { createContext, useContext, useReducer, type Dispatch, type ReactNode } from "react";
+import { readUiPreferences } from "../config/preferences";
 import type { AssistantAction, AssistantState } from "./types";
 
+const savedPreferences = readUiPreferences();
 const initialState: AssistantState = {
-  characterId: "bou",
-  mode: "3d",
+  characterId: savedPreferences.characterId,
+  mode: savedPreferences.mode,
   status: "idle",
   messages: [
     { id: "welcome", role: "assistant", text: "হাই, আমি Bou। আজ কী নিয়ে কথা বলতে চাও?", createdAt: Date.now() },
